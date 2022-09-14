@@ -1,0 +1,26 @@
+{
+    "name": "gcl-vscode",
+    "displayName": "GCL",
+    "description": "GCL Syntax Highlighting",
+    "publisher": "aionescu",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.50.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "gcl",
+            "aliases": ["GCL", "gcl", "Guarded Command Language"],
+            "extensions": [".gcl"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "gcl",
+            "scopeName": "source.gcl",
+            "path": "./syntaxes/gcl.tmLanguage.json"
+        }]
+    }
+}

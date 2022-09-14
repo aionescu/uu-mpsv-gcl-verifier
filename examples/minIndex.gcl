@@ -1,0 +1,24 @@
+-- Given non-empty array `a`, this program returns an index of `a`
+-- pointing to a minimum element of `a`.
+-- Supposedly valid.
+
+minIndex(a: [Int]) -> r: Int {
+  assume #a > 0;
+
+  let min: Int, i: Int {
+    i = 0;
+    min = a[i];
+    r = i;
+
+    while i < #a {
+      if a[i] < min {
+        min = a[i];
+        r = i;
+      }
+
+      i = i + 1;
+    }
+  }
+
+  assert 0 <= r && r < #a && forall i. 0 <= i && i < #a => a[i] >= a[r];
+}

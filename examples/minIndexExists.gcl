@@ -1,0 +1,20 @@
+minIndex(a: [Int]) -> r: Int {
+  assume #a > 0;
+
+  let min: Int, i: Int {
+    i = 0;
+    min = a[i];
+    r = i;
+
+    while i < #a {
+      if a[i] < min {
+        min = a[i];
+        r = i;
+      }
+
+      i = i + 1;
+    }
+  }
+
+  assert 0 <= r && r < #a && exists i. 0 <= i && i < #a => a[i] >= a[r];
+}

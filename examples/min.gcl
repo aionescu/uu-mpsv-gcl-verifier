@@ -1,0 +1,10 @@
+-- This returns the minimum of two integers. Supposedly valid.
+min(x: Int, y: Int) -> z: Int {
+  z = x;
+
+  if y < x {
+    z = y;
+  }
+
+  assert (z == x || z == y) && z <= x && z <= y;
+}

@@ -1,0 +1,11 @@
+-- Just a very simple example; it is faulty
+e(x: Int) -> y: Int {
+  assume 1 < x;
+
+  while 0 < x {
+    x = x - 1;
+  }
+
+  y = x;
+  assert y == 1; -- Faulty
+}

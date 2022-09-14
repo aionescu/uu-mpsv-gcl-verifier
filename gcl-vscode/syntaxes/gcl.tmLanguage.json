@@ -1,0 +1,68 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "GCL",
+	"patterns": [
+		{ "include": "#comment" },
+		{ "include": "#keyword" },
+		{ "include": "#operator" },
+		{ "include": "#number" },
+		{ "include": "#type" },
+		{ "include": "#bool" },
+		{ "include": "#string" }
+	],
+	"repository": {
+    "comment": {
+      "patterns": [{
+        "name": "comment.line.double-dash.gcl",
+        "match": "--.*$"
+      }, {
+        "name": "comment.block.gcl",
+        "begin": "{-",
+        "beginCaptures": { "0": { "name": "punctuation.definition.comment.gcl" }},
+        "end": "-}",
+        "endCaptues": { "0": { "name": "punctuation.definition.comment.gcl" }},
+        "patterns": [{ "include": "#comment" }]
+      }]
+    },
+		"keyword": {
+			"patterns": [{
+				"name": "keyword.control.gcl",
+				"match": "\\b(skip|assume|assert|if|else|while|let|forall|exists)\\b"
+			}]
+    },
+    "operator": {
+      "patterns": [{
+        "name": "keyword.control.gcl",
+        "match": ":|\\.|->|\\+|-|\\*|/|&&|\\|\\||=(=|>)?|/=|<=?|>=?"
+      }]
+    },
+    "number": {
+      "patterns": [{
+        "name": "constant.numeric.gcl",
+        "match": "\\b-?[0-9]+\\b"
+      }]
+    },
+    "type": {
+      "patterns": [{
+        "name": "support.function.brs",
+        "match": "\\b(Int|Bool)\\b"
+      }]
+    },
+    "bool": {
+      "patterns": [{
+        "name": "constant.language.gcl",
+        "match": "\\b(True|False)\\b"
+      }]
+    },
+		"string": {
+			"name": "string.quoted.double.gcl",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [{
+        "name": "constant.character.escape.gcl",
+        "match": "\\\\."
+      }]
+    }
+	},
+	"scopeName": "source.gcl"
+}
