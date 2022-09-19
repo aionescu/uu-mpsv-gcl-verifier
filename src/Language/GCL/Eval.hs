@@ -1,6 +1,5 @@
 module Language.GCL.Eval(Val(..), eval) where
 
-import Control.Applicative((<|>))
 import Control.Monad.State.Strict(State, evalState, gets, modify)
 import Data.Function(on)
 import Data.Map.Strict(Map)
@@ -102,18 +101,17 @@ evalStmt w@(While g s) = evalExpr g >>= \case
 evalStmt (Seq a b) = evalStmt a *> evalStmt b
 evalStmt (Let ds s) = evalStmt s *> modify \m -> foldr M.delete m $ declName <$> ds
 
-readVal :: String -> Val
-readVal s =
-  fromJust
-  $ I <$> readMaybe @Int s
-  <|> B <$> readMaybe @Bool s
-  <|> A . fmap I <$> readMaybe @(Vector Int) s
-  <|> A . fmap B <$> readMaybe @(Vector Bool) s
+readVal :: Type -> String -> Maybe Val
+readVal Int s = I <$> readMaybe @Int s
+readVal Bool s = B <$> readMaybe @Bool s
+readVal (Array Int) s = A . fmap I <$> readMaybe @(Vector Int) s
+readVal (Array Bool) s = A . fmap B <$> readMaybe @(Vector Bool) s
+readVal _ _ = error "readVal: Ill-formed type"
 
 getInputs :: [Decl] -> [String] -> Env
 getInputs ds vs
   | length ds /= length vs = error "Invalid number of arguments"
-  | otherwise = M.fromList $ zipWith (\(Decl v _) s -> (v, readVal s)) ds vs
+  | otherwise = M.fromList $ zipWith (\(Decl v t) s -> (v, fromJust $ readVal t s)) ds vs
 
 eval :: [String] -> Program -> Val
 eval args (Program _ i o@(Decl v _) b) =

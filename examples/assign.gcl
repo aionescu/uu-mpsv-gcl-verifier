@@ -1,0 +1,4 @@
+assign(x: Int, y: Int) -> z: Int {
+  z = x + y;
+  assert z == x + y;
+}

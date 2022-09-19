@@ -31,6 +31,8 @@ data Expr
   | Forall Id Expr
   | Exists Id Expr
 
+type Pred = Expr
+
 data Decl =
   Decl
   { declName :: Id
@@ -55,6 +57,21 @@ data Program =
   , programOutput :: Decl
   , programBody :: Stmt
   }
+
+-- Helper instances
+
+instance Num Expr where
+  a + b = BinOp a Add b
+  a - b = BinOp a Sub b
+  a * b = BinOp a Mul b
+
+  fromInteger = IntLit . fromInteger
+  abs = undefined
+  signum = undefined
+
+instance Fractional Expr where
+  fromRational = undefined
+  a / b = BinOp a Div b
 
 -- `Show` Instances
 

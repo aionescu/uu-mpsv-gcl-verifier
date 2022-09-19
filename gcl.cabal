@@ -25,6 +25,7 @@ executable gcl
     Language.GCL.Syntax
     Language.GCL.TypeChecking
     Language.GCL.Utils
+    Language.GCL.Verification
 
   build-depends:
     base >=4.15 && <5
