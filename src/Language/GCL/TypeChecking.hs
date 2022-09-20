@@ -38,7 +38,7 @@ typeInferExpr IntLit{} = pure Int
 typeInferExpr BoolLit{} = pure Bool
 typeInferExpr (Var v) = lookupVar v
 typeInferExpr (Length v) = (lookupVar v >>= unArray) $> Int
-typeInferExpr (BinOp a op b)
+typeInferExpr (BinOp op a b)
   | op `elem` [Add, Sub, Mul, Div] = typeCheckExpr Int a *> typeCheckExpr Int b $> Int
   | op `elem` [And, Or, Implies] = typeCheckExpr Bool a *> typeCheckExpr Bool b $> Bool
   | op `elem` [Eq, Neq, Lt, Lte, Gt, Gte] = typeCheckExpr Int a *> typeCheckExpr Int b $> Bool

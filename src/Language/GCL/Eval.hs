@@ -66,7 +66,7 @@ evalExpr (IntLit i) = pure $ I i
 evalExpr (BoolLit b) = pure $ B b
 evalExpr (Var v) = lookupVar v
 evalExpr (Length v) = I . V.length . unA <$> lookupVar v
-evalExpr (BinOp a o b) = evalOp o a b
+evalExpr (BinOp o a b) = evalOp o a b
 evalExpr (Negate e) = evalExpr e >>= \case
   I i -> pure $ I $ negate i
   B b -> pure $ B $ not b
