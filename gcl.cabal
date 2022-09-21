@@ -22,6 +22,7 @@ executable gcl
     Language.GCL.Eval
     Language.GCL.InitChecking
     Language.GCL.Parser
+    Language.GCL.PrettyPrint
     Language.GCL.Syntax
     Language.GCL.TypeChecking
     Language.GCL.Utils

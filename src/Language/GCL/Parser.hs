@@ -11,7 +11,7 @@ import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer qualified as L
 
-import Language.GCL.Syntax hiding (block, decls)
+import Language.GCL.Syntax
 
 type Parser = Parsec Void Text
 
@@ -87,7 +87,7 @@ operatorTable =
   , [ opN "=>" Implies ]
   ]
   where
-    op f sym op = f $ symbol sym $> \a b -> BinOp a op b
+    op f sym op = f $ symbol sym $> BinOp op
     opL = op InfixL
     opR = op InfixR
     opN = op InfixN
