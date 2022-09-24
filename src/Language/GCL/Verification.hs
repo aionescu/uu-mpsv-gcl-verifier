@@ -1,20 +1,17 @@
 module Language.GCL.Verification(runWLP) where
 
-import Data.Coerce(coerce)
 import Data.Fix(Fix(..))
+import Data.Functor.Foldable(para)
 
 import Language.GCL.Syntax
 
 subst :: Id -> Expr -> Pred -> Pred
-subst i e = coerce \case
-  Var x | i == x -> unFix e
-  Length x | i == x -> unFix e
-  BinOp op lhs rhs -> BinOp op (subst i e lhs) (subst i e rhs)
-  Negate rhs -> Negate $ subst i e rhs
-  Subscript v s -> Subscript v $ subst i e s
-  Forall v p | i /= v -> Forall v $ subst i e p
-  Exists v p | i /= v -> Exists v $ subst i e p
-  p -> p
+subst i e = para \case
+  Var v | i == v -> e
+  Length v | i == v -> e
+  Forall v (p, _) | i == v -> Fix $ Forall v p
+  Exists v (p, _) | i == v -> Fix $ Exists v p
+  p -> Fix $ snd <$> p
 
 unroll :: Int -> Expr -> Stmt -> Stmt
 unroll 0 g _ = Assert (-g)

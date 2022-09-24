@@ -1,7 +1,7 @@
 module Language.GCL.Syntax where
 
 import Data.Fix(Fix(..))
-import Data.Functor.Classes(Show1(..))
+import Data.Functor.Classes(Show1(..), showsPrec1)
 import Data.List(intercalate)
 import Data.Text(Text)
 import Data.Text qualified as T
@@ -42,6 +42,7 @@ data ExprF e
   | Subscript Id e
   | Forall Id e
   | Exists Id e
+  deriving Functor
 
 type Expr = Fix ExprF
 
@@ -158,6 +159,10 @@ instance Show1 ExprF where
     Subscript v e -> showText v . showChar '[' . showE 0 e . showChar ']'
     Forall v e -> showParen (p > 1) $ showString "forall " . showText v . showString ". " . showE 0 e
     Exists v e -> showParen (p > 1) $ showString "exists " . showText v . showString ". " . showE 0 e
+
+instance {-# OVERLAPPING #-} Show Expr where
+  showsPrec :: Int -> Expr -> ShowS
+  showsPrec d = showsPrec1 d . unFix
 
 instance Show Decl where
   show (Decl v t) = T.unpack v <> ": " <> show t
