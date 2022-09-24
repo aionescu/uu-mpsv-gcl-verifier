@@ -66,9 +66,9 @@ type' = primType <|> Array <$> btwn "[" "]" primType
 exprAtom :: Parser Expr
 exprAtom =
   choice
-  [ Fix . IntLit <$> lexeme L.decimal
-  , true <$ symbol "True"
-  , false <$ symbol "False"
+  [ I <$> lexeme L.decimal
+  , T <$ symbol "True"
+  , F <$ symbol "False"
   , try $ Fix ... Subscript <$> ident <*> btwn "[" "]" expr
   , Fix . Var <$> ident
   , Fix . Length <$> (char '#' *> ident)

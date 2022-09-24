@@ -32,6 +32,12 @@ data BinOp
   | Gte
   deriving Eq
 
+isCommutative :: BinOp -> Bool
+isCommutative o = o `elem` [Add, Mul]
+
+isAssociative :: BinOp -> Bool
+isAssociative o = o `elem` [Add, Mul, And, Or]
+
 data ExprF e
   = IntLit Int
   | BoolLit Bool
@@ -86,20 +92,28 @@ instance Fractional Expr where
   (/) = Fix ... BinOp Div
   fromRational = undefined
 
-true, false :: Expr
-true = Fix $ BoolLit True
-false = Fix $ BoolLit False
+pattern I :: Int -> Expr
+pattern I i = Fix (IntLit i)
+
+pattern B :: Bool -> Expr
+pattern B b = Fix (BoolLit b)
+
+pattern T :: Expr
+pattern T = B True
+
+pattern F :: Expr
+pattern F = B False
 
 pattern (:&&) :: Expr -> Expr -> Expr
-pattern (:&&) a b = Fix (BinOp And a b)
+pattern a :&& b = Fix (BinOp And a b)
 infixr 3 :&&
 
 pattern (:||) :: Expr -> Expr -> Expr
-pattern (:||) a b = Fix (BinOp Or a b)
+pattern a :|| b = Fix (BinOp Or a b)
 infixr 2 :||
 
 pattern (:=>) :: Expr -> Expr -> Expr
-pattern (:=>) a b = Fix (BinOp Implies a b)
+pattern a :=> b = Fix (BinOp Implies a b)
 infixr 1 :=>
 
 -- Show instances
@@ -162,7 +176,7 @@ instance Show1 ExprF where
 
 instance {-# OVERLAPPING #-} Show Expr where
   showsPrec :: Int -> Expr -> ShowS
-  showsPrec d = showsPrec1 d . unFix
+  showsPrec p = showsPrec1 p . unFix
 
 instance Show Decl where
   show (Decl v t) = T.unpack v <> ": " <> show t

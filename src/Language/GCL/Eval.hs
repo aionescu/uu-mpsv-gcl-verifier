@@ -14,24 +14,24 @@ import Text.Read(readMaybe)
 import Language.GCL.Syntax
 
 data Val
-  = I { unI :: Int }
-  | B { unB :: Bool }
-  | A { unA :: Vector Val }
+  = I' { unI :: Int }
+  | B' { unB :: Bool }
+  | A' { unA :: Vector Val }
   deriving (Eq, Ord)
 
 instance Show Val where
-  show (I i) = show i
-  show (B b) = show b
-  show (A a) = show a
+  show (I' i) = show i
+  show (B' b) = show b
+  show (A' a) = show a
 
 instance Num Val where
-  (+) = (I .) . (+) `on` unI
-  (-) = (I .) . (-) `on` unI
-  (*) = (I .) . (*) `on` unI
+  (+) = (I' .) . (+) `on` unI
+  (-) = (I' .) . (-) `on` unI
+  (*) = (I' .) . (*) `on` unI
 
-  abs = I . abs . unI
-  signum = I . signum . unI
-  fromInteger = I . fromInteger
+  abs = I' . abs . unI
+  signum = I' . signum . unI
+  fromInteger = I' . fromInteger
 
 type Env = Map Id Val
 type Eval = State Env
@@ -41,74 +41,74 @@ lookupVar v = gets (M.! v)
 
 evalOp :: BinOp -> Expr -> Expr -> Eval Val
 evalOp And a b = evalExpr a >>= \case
-  B True -> evalExpr b
+  B' True -> evalExpr b
   a -> pure a
 evalOp Or a b = evalExpr a >>= \case
-  B False -> evalExpr b
+  B' False -> evalExpr b
   a -> pure a
 evalOp Implies a b = evalExpr a >>= \case
-  B False -> pure $ B True
+  B' False -> pure $ B' True
   _ -> evalExpr b
 evalOp o a b = op o <$> evalExpr a <*> evalExpr b
   where
     op Add = (+)
     op Sub = (-)
     op Mul = (*)
-    op Div = (I .) . quot `on` unI
-    op Eq = (B .) . (==)
-    op Neq = (B .) . (/=)
-    op Lt = (B .) . (<)
-    op Lte = (B .) . (<=)
-    op Gt = (B .) . (>)
-    op Gte = (B .) . (>=)
+    op Div = (I' .) . quot `on` unI
+    op Eq = (B' .) . (==)
+    op Neq = (B' .) . (/=)
+    op Lt = (B' .) . (<)
+    op Lte = (B' .) . (<=)
+    op Gt = (B' .) . (>)
+    op Gte = (B' .) . (>=)
     op _ = error "op: Unreachable"
 
 evalExpr :: Expr -> Eval Val
 evalExpr = unFix >>> \case
-  IntLit i -> pure $ I i
-  BoolLit b -> pure $ B b
+  IntLit i -> pure $ I' i
+  BoolLit b -> pure $ B' b
   Var v -> lookupVar v
-  Length v -> I . V.length . unA <$> lookupVar v
+  Length v -> I' . V.length . unA <$> lookupVar v
   BinOp o a b -> evalOp o a b
   Negate e -> evalExpr e >>= \case
-    I i -> pure $ I $ negate i
-    B b -> pure $ B $ not b
+    I' i -> pure $ I' $ negate i
+    B' b -> pure $ B' $ not b
     _ -> error "evalExpr: Unreachable"
   Subscript v e -> (V.!) <$> (unA <$> lookupVar v) <*> (unI <$> evalExpr e)
-  Forall v e -> B . all unB <$> traverse (instantiate v e) [-100 .. 100]
-  Exists v e -> B . any unB <$> traverse (instantiate v e) [-100 .. 100]
+  Forall v e -> B' . all unB <$> traverse (instantiate v e) [-100 .. 100]
+  Exists v e -> B' . any unB <$> traverse (instantiate v e) [-100 .. 100]
 
 instantiate :: Id -> Expr -> Int -> Eval Val
-instantiate v e i = modify (M.insert v $ I i) *> evalExpr e
+instantiate v e i = modify (M.insert v $ I' i) *> evalExpr e
 
 evalStmt :: Stmt -> Eval ()
 evalStmt Skip = pure ()
 evalStmt (Assume e) = evalExpr e >>= \case
-  B False -> error "assume failed"
+  B' False -> error "assume failed"
   _ -> pure ()
 evalStmt (Assert e) = evalExpr e >>= \case
-  B False -> error "assert failed"
+  B' False -> error "assert failed"
   _ -> pure ()
 evalStmt (Assign v e) = modify . M.insert v =<< evalExpr e
 evalStmt (AssignIndex v i e) = do
   a <- unA <$> lookupVar v
   i <- unI <$> evalExpr i
   e <- evalExpr e
-  modify (M.insert v $ A $ a V.// [(i, e)])
+  modify (M.insert v $ A' $ a V.// [(i, e)])
 evalStmt (If g t e) = evalExpr g >>= \case
-  B True -> evalStmt t
+  B' True -> evalStmt t
   _ -> evalStmt e
 evalStmt w@(While g s) = evalExpr g >>= \case
-  B True -> evalStmt s *> evalStmt w
+  B' True -> evalStmt s *> evalStmt w
   _ -> pure ()
 evalStmt (Seq a b) = evalStmt a *> evalStmt b
 evalStmt (Let ds s) = evalStmt s *> modify \m -> foldr M.delete m $ declName <$> ds
 
 readVal :: Type -> String -> Maybe Val
-readVal Int s = I <$> readMaybe @Int s
-readVal Bool s = B <$> readMaybe @Bool s
-readVal (Array Int) s = A . fmap I <$> readMaybe @(Vector Int) s
-readVal (Array Bool) s = A . fmap B <$> readMaybe @(Vector Bool) s
+readVal Int s = I' <$> readMaybe @Int s
+readVal Bool s = B' <$> readMaybe @Bool s
+readVal (Array Int) s = A' . fmap I' <$> readMaybe @(Vector Int) s
+readVal (Array Bool) s = A' . fmap B' <$> readMaybe @(Vector Bool) s
 readVal _ _ = error "readVal: Ill-formed type"
 
 getInputs :: [Decl] -> [String] -> Env
