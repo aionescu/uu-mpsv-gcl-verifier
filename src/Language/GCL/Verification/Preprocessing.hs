@@ -6,6 +6,20 @@ import Data.Functor.Foldable(cata, para)
 import Language.GCL.Syntax
 import Language.GCL.Utils((...))
 
+preprocess :: Program -> Program
+preprocess = runRemoveShadowing . unrollLoops  
+
+unroll :: Int -> Expr -> Stmt -> Stmt
+unroll 0 g _ = Assert (-g)
+unroll n g s = If g (Seq s $ unroll (n - 1) g s) Skip
+
+unrollLoops :: Program -> Program
+unrollLoops Program{..} =
+  case programBody of
+    -- recursion schemes
+    (While g s) -> Program{programBody=unroll 10 g s, ..}
+    _ -> Program{..}
+
 fresh :: Id -> State Counter Id 
 fresh name = do
   c <- get
@@ -25,7 +39,6 @@ substStmt id nid (AssignIndex i e1 e2) = return $ AssignIndex cid (subst id (Var
   where cid = if i == id then nid else i
 substStmt id nid (Let _ s) = substStmt id nid s
 
-
 removeShadowingStmt :: Stmt -> State Counter Stmt
 removeShadowingStmt (Let dcs s) = do
   ns <- removeShadowingStmt s
@@ -35,11 +48,10 @@ removeShadowingStmt (Let dcs s) = do
   nS <- foldM (flip $ uncurry substStmt) ns $ zip names tr
   return $ Let nD nS
 
-
-removeShadowingExec :: Program -> State Counter Program
-removeShadowingExec Program{..} = do
+removeShadowing :: Program -> State Counter Program
+removeShadowing Program{..} = do
   programBody <- removeShadowingStmt programBody
   return Program{..}
 
-removeShadowing :: Program -> Program
-removeShadowing p = execState (removeShadowingExec p) 0
+runRemoveShadowing :: Program -> Program
+runRemoveShadowing p = evalState (removeShadowing p) 0
