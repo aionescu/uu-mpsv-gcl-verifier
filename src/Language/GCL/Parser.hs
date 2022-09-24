@@ -2,6 +2,7 @@ module Language.GCL.Parser(parse) where
 
 import Control.Monad.Combinators.Expr(Operator(..), makeExprParser)
 import Data.Bifunctor(first)
+import Data.Fix(Fix(..))
 import Data.Function(on)
 import Data.Functor(($>))
 import Data.Text(Text)
@@ -12,6 +13,7 @@ import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer qualified as L
 
 import Language.GCL.Syntax hiding (block, decls)
+import Language.GCL.Utils((...))
 
 type Parser = Parsec Void Text
 
@@ -64,20 +66,20 @@ type' = primType <|> Array <$> btwn "[" "]" primType
 exprAtom :: Parser Expr
 exprAtom =
   choice
-  [ IntLit <$> lexeme L.decimal
-  , BoolLit True <$ symbol "True"
-  , BoolLit False <$ symbol "False"
-  , try $ Subscript <$> ident <*> btwn "[" "]" expr
-  , Var <$> ident
-  , Length <$> (char '#' *> ident)
-  , Forall <$> (symbol "forall" *> ident <* symbol ".") <*> expr
-  , Exists <$> (symbol "exists" *> ident <* symbol ".") <*> expr
+  [ Fix . IntLit <$> lexeme L.decimal
+  , true <$ symbol "True"
+  , false <$ symbol "False"
+  , try $ Fix ... Subscript <$> ident <*> btwn "[" "]" expr
+  , Fix . Var <$> ident
+  , Fix . Length <$> (char '#' *> ident)
+  , Fix ... Forall <$> (symbol "forall" *> ident <* symbol ".") <*> expr
+  , Fix ... Exists <$> (symbol "exists" *> ident <* symbol ".") <*> expr
   , btwn "(" ")" expr
   ]
 
 operatorTable :: [[Operator Parser Expr]]
 operatorTable =
-  [ [ Prefix $ symbol "~" $> Negate ]
+  [ [ Prefix $ Fix . Negate <$ symbol "~" ]
   , [ opL "*" Mul, opL "/" Div ]
   , [ opL "+" Add, opL "-" Sub ]
   , [ opN "<=" Lte, opN ">=" Gte, opN "<" Lt, opN ">" Gt ]
@@ -87,7 +89,7 @@ operatorTable =
   , [ opN "=>" Implies ]
   ]
   where
-    op f sym op = f $ symbol sym $> BinOp op
+    op f sym op = f $ Fix ... BinOp op <$ symbol sym
     opL = op InfixL
     opR = op InfixR
     opN = op InfixN

@@ -1,6 +1,8 @@
 module Language.GCL.Eval(Val(..), eval) where
 
+import Control.Category((>>>))
 import Control.Monad.State.Strict(State, evalState, gets, modify)
+import Data.Fix(Fix(..))
 import Data.Function(on)
 import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as M
@@ -62,18 +64,19 @@ evalOp o a b = op o <$> evalExpr a <*> evalExpr b
     op _ = error "op: Unreachable"
 
 evalExpr :: Expr -> Eval Val
-evalExpr (IntLit i) = pure $ I i
-evalExpr (BoolLit b) = pure $ B b
-evalExpr (Var v) = lookupVar v
-evalExpr (Length v) = I . V.length . unA <$> lookupVar v
-evalExpr (BinOp o a b) = evalOp o a b
-evalExpr (Negate e) = evalExpr e >>= \case
-  I i -> pure $ I $ negate i
-  B b -> pure $ B $ not b
-  _ -> error "evalExpr: Unreachable"
-evalExpr (Subscript v e) = (V.!) <$> (unA <$> lookupVar v) <*> (unI <$> evalExpr e)
-evalExpr (Forall v e) = B . all unB <$> traverse (instantiate v e) [-100 .. 100]
-evalExpr (Exists v e) = B . any unB <$> traverse (instantiate v e) [-100 .. 100]
+evalExpr = unFix >>> \case
+  IntLit i -> pure $ I i
+  BoolLit b -> pure $ B b
+  Var v -> lookupVar v
+  Length v -> I . V.length . unA <$> lookupVar v
+  BinOp o a b -> evalOp o a b
+  Negate e -> evalExpr e >>= \case
+    I i -> pure $ I $ negate i
+    B b -> pure $ B $ not b
+    _ -> error "evalExpr: Unreachable"
+  Subscript v e -> (V.!) <$> (unA <$> lookupVar v) <*> (unI <$> evalExpr e)
+  Forall v e -> B . all unB <$> traverse (instantiate v e) [-100 .. 100]
+  Exists v e -> B . any unB <$> traverse (instantiate v e) [-100 .. 100]
 
 instantiate :: Id -> Expr -> Int -> Eval Val
 instantiate v e i = modify (M.insert v $ I i) *> evalExpr e

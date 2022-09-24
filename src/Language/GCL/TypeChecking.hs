@@ -1,9 +1,11 @@
 module Language.GCL.TypeChecking(typeCheck) where
 
+import Control.Category((>>>))
 import Control.Monad(unless)
 import Control.Monad.Except(throwError)
 import Control.Monad.Reader(ReaderT, asks, local, runReaderT)
 import Data.Bifunctor(first)
+import Data.Fix(Fix(..))
 import Data.Foldable(fold)
 import Data.Functor(($>), void)
 import Data.Map.Strict(Map)
@@ -34,21 +36,22 @@ typeCheckExpr :: Type -> Expr -> TC ()
 typeCheckExpr expected e = typeInferExpr e >>= mustBe expected
 
 typeInferExpr :: Expr -> TC Type
-typeInferExpr IntLit{} = pure Int
-typeInferExpr BoolLit{} = pure Bool
-typeInferExpr (Var v) = lookupVar v
-typeInferExpr (Length v) = (lookupVar v >>= unArray) $> Int
-typeInferExpr (BinOp op a b)
-  | op `elem` [Add, Sub, Mul, Div] = typeCheckExpr Int a *> typeCheckExpr Int b $> Int
-  | op `elem` [And, Or, Implies] = typeCheckExpr Bool a *> typeCheckExpr Bool b $> Bool
-  | op `elem` [Eq, Neq, Lt, Lte, Gt, Gte] = typeCheckExpr Int a *> typeCheckExpr Int b $> Bool
-  | otherwise = error "typeInferExpr: Unreachable"
-typeInferExpr (Negate e) = typeInferExpr e >>= \case
-  t@Array{} -> throwError $ "Expected primitive type, found " <> showT t
-  t -> pure t
-typeInferExpr (Subscript v e) = typeCheckExpr Int e *> lookupVar v >>= unArray
-typeInferExpr (Forall v e) = withDecls [Decl v Int] $ typeCheckExpr Bool e $> Bool
-typeInferExpr (Exists v e) = withDecls [Decl v Int] $ typeCheckExpr Bool e $> Bool
+typeInferExpr = unFix >>> \case
+  IntLit{} -> pure Int
+  BoolLit{} -> pure Bool
+  Var v -> lookupVar v
+  Length v -> (lookupVar v >>= unArray) $> Int
+  BinOp op a b
+    | op `elem` [Add, Sub, Mul, Div] -> typeCheckExpr Int a *> typeCheckExpr Int b $> Int
+    | op `elem` [And, Or, Implies] -> typeCheckExpr Bool a *> typeCheckExpr Bool b $> Bool
+    | op `elem` [Eq, Neq, Lt, Lte, Gt, Gte] -> typeCheckExpr Int a *> typeCheckExpr Int b $> Bool
+    | otherwise -> error "typeInferExpr: Unreachable"
+  Negate e -> typeInferExpr e >>= \case
+    t@Array{} -> throwError $ "Expected primitive type, found " <> showT t
+    t -> pure t
+  Subscript v e -> typeCheckExpr Int e *> lookupVar v >>= unArray
+  Forall v e -> withDecls [Decl v Int] $ typeCheckExpr Bool e $> Bool
+  Exists v e -> withDecls [Decl v Int] $ typeCheckExpr Bool e $> Bool
 
 typeCheckDecl :: Decl -> TC Env
 typeCheckDecl (Decl v t) = asks (M.!? v) >>= \case

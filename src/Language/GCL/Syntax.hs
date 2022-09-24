@@ -1,8 +1,12 @@
 module Language.GCL.Syntax where
 
+import Data.Fix(Fix(..))
+import Data.Functor.Classes(Show1(..))
 import Data.List(intercalate)
 import Data.Text(Text)
 import Data.Text qualified as T
+
+import Language.GCL.Utils((...))
 
 type Id = Text
 
@@ -28,16 +32,18 @@ data BinOp
   | Gte
   deriving Eq
 
-data Expr
+data ExprF e
   = IntLit Int
   | BoolLit Bool
   | Var Id
   | Length Id
-  | BinOp BinOp Expr Expr
-  | Negate Expr
-  | Subscript Id Expr
-  | Forall Id Expr
-  | Exists Id Expr
+  | BinOp BinOp e e
+  | Negate e
+  | Subscript Id e
+  | Forall Id e
+  | Exists Id e
+
+type Expr = Fix ExprF
 
 type Pred = Expr
 
@@ -67,32 +73,32 @@ data Program = Program
 -- Helpers for cleaner syntax
 
 instance Num Expr where
-  fromInteger = IntLit . fromInteger
-  (+) = BinOp Add
-  (-) = BinOp Sub
-  (*) = BinOp Mul
-  negate = Negate
+  fromInteger = Fix . IntLit . fromInteger
+  (+) = Fix ... BinOp Add
+  (-) = Fix ... BinOp Sub
+  (*) = Fix ... BinOp Mul
+  negate = Fix . Negate
   abs = undefined
   signum = undefined
 
 instance Fractional Expr where
-  (/) = BinOp Div
+  (/) = Fix ... BinOp Div
   fromRational = undefined
 
 true, false :: Expr
-true = BoolLit True
-false = BoolLit False
+true = Fix $ BoolLit True
+false = Fix $ BoolLit False
 
 pattern (:&&) :: Expr -> Expr -> Expr
-pattern (:&&) a b = BinOp And a b
+pattern (:&&) a b = Fix (BinOp And a b)
 infixr 3 :&&
 
 pattern (:||) :: Expr -> Expr -> Expr
-pattern (:||) a b = BinOp Or a b
+pattern (:||) a b = Fix (BinOp Or a b)
 infixr 2 :||
 
 pattern (:=>) :: Expr -> Expr -> Expr
-pattern (:=>) a b = BinOp Implies a b
+pattern (:=>) a b = Fix (BinOp Implies a b)
 infixr 1 :=>
 
 -- Show instances
@@ -138,20 +144,20 @@ precedence = \case
 showText :: Text -> ShowS
 showText = showString . T.unpack
 
-instance Show Expr where
-  showsPrec :: Int -> Expr -> ShowS
-  showsPrec p = \case
+instance Show1 ExprF where
+  liftShowsPrec :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> ExprF a -> ShowS
+  liftShowsPrec showE _ p = \case
     IntLit i -> shows i
     BoolLit b -> shows b
     Var v -> showText v
     Length v -> showChar '#' . showText v
     BinOp o a b ->
       let q = precedence o
-      in showParen (p > q) $ showsPrec q a . showChar ' ' . shows o . showChar ' ' . showsPrec q b
-    Negate e -> showChar '~' . showsPrec 9 e
-    Subscript v e -> showText v . showChar '[' . shows e . showChar ']'
-    Forall v e -> showParen (p > 1) $ showString "forall " . showText v . showString ". " . shows e
-    Exists v e -> showParen (p > 1) $ showString "exists " . showText v . showString ". " . shows e
+      in showParen (p > q) $ showE q a . showChar ' ' . shows o . showChar ' ' . showE q b
+    Negate e -> showChar '~' . showE 9 e
+    Subscript v e -> showText v . showChar '[' . showE 0 e . showChar ']'
+    Forall v e -> showParen (p > 1) $ showString "forall " . showText v . showString ". " . showE 0 e
+    Exists v e -> showParen (p > 1) $ showString "exists " . showText v . showString ". " . showE 0 e
 
 instance Show Decl where
   show (Decl v t) = T.unpack v <> ": " <> show t

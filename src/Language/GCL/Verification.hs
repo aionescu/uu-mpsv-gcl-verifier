@@ -1,25 +1,20 @@
 module Language.GCL.Verification(runWLP) where
 
+import Data.Coerce(coerce)
+import Data.Fix(Fix(..))
+
 import Language.GCL.Syntax
 
 subst :: Id -> Expr -> Pred -> Pred
-subst _ _ l@(IntLit _) = l
-subst _ _ l@(BoolLit _) = l
-subst i e v@(Var x)
-  | i == x = e
-  | otherwise = v
-subst i e v@(Length x)
-  | i == x = e
-  | otherwise = v
-subst i e (BinOp op lhs rhs) = BinOp op (subst i e lhs) (subst i e rhs)
-subst i e (Negate rhs) = Negate $ subst i e rhs
-subst i e (Subscript v s) = Subscript v $ subst i e s
-subst i e f@(Forall v p)
-  | i == v = f
-  | otherwise = Forall v $ subst i e p
-subst i e f@(Exists v p)
-  | i == v = f
-  | otherwise = Exists v $ subst i e p
+subst i e = coerce \case
+  Var x | i == x -> unFix e
+  Length x | i == x -> unFix e
+  BinOp op lhs rhs -> BinOp op (subst i e lhs) (subst i e rhs)
+  Negate rhs -> Negate $ subst i e rhs
+  Subscript v s -> Subscript v $ subst i e s
+  Forall v p | i /= v -> Forall v $ subst i e p
+  Exists v p | i /= v -> Exists v $ subst i e p
+  p -> p
 
 unroll :: Int -> Expr -> Stmt -> Stmt
 unroll 0 g _ = Assert (-g)
@@ -36,4 +31,4 @@ wlp (While g s) q = wlp (unroll 10 g s) q
 wlp _ _ = error "wlp: TODO"
 
 runWLP :: Program -> Pred
-runWLP Program{..} = wlp programBody $ BoolLit True
+runWLP Program{..} = wlp programBody true

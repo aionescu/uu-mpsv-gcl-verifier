@@ -1,8 +1,10 @@
 module Language.GCL.InitChecking where
 
+import Control.Category((>>>))
 import Control.Monad.Except(MonadError(throwError))
 import Control.Monad.Reader(ReaderT, asks, local, runReaderT)
 import Data.Bifunctor(first)
+import Data.Fix(Fix(..))
 import Data.Functor(($>))
 import Data.Set(Set)
 import Data.Set qualified as S
@@ -19,15 +21,16 @@ requireInit v = asks (S.member v) >>= \case
   _ -> pure ()
 
 initCheckExpr :: Expr -> Init ()
-initCheckExpr IntLit{} = pure ()
-initCheckExpr BoolLit{} = pure ()
-initCheckExpr (Var v) = requireInit v
-initCheckExpr (Length v) = requireInit v
-initCheckExpr (BinOp _ a b) = initCheckExpr a *> initCheckExpr b
-initCheckExpr (Negate e) = initCheckExpr e
-initCheckExpr (Subscript v e) = requireInit v *> initCheckExpr e
-initCheckExpr (Forall v e) = local (S.insert v) $ initCheckExpr e
-initCheckExpr (Exists v e) = local (S.insert v) $ initCheckExpr e
+initCheckExpr = unFix >>> \case
+  IntLit{} -> pure ()
+  BoolLit{} -> pure ()
+  Var v -> requireInit v
+  Length v -> requireInit v
+  BinOp _ a b -> initCheckExpr a *> initCheckExpr b
+  Negate e -> initCheckExpr e
+  Subscript v e -> requireInit v *> initCheckExpr e
+  Forall v e -> local (S.insert v) $ initCheckExpr e
+  Exists v e -> local (S.insert v) $ initCheckExpr e
 
 initCheckStmt :: Stmt -> Init Env
 initCheckStmt Skip = pure S.empty
