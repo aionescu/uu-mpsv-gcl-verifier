@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 module Language.GCL.Verification(runWLP) where
 import Language.GCL.Syntax
-import Control.Monad.State.Strict(State, get, put, execState)
+import Control.Monad.State.Strict(State, get, put, evalState)
 import Control.Monad(foldM)
 import Language.GCL.Utils
 
@@ -26,30 +27,35 @@ subst i e f@(Exists v p)
   | i == v = f
   | otherwise = Exists v $ subst i e p
 
-unroll :: Int -> Expr -> Stmt -> Stmt
-unroll 0 g _ = Assert (-g)
-unroll n g s = If g (Seq s $ unroll (n - 1) g s) Skip
-
 wlp :: Stmt -> Pred -> Pred
 wlp Skip q = q
 wlp (Assign i e) q = subst i e q
 wlp (Seq s₁ s₂) q = wlp s₁ $ wlp s₂ q
-wlp (Assert e) q = BinOp e And q
-wlp (Assume e) q = BinOp e Implies q
 wlp (Assert e) q = e :&& q
 wlp (Assume e) q = e :=> q
 wlp (If g s₁ s₂) q = (g :=> wlp s₁ q) :&& (-g :=> wlp s₂ q)
-wlp (While g s) q = wlp (unroll 10 g s) q
+wlp (While _ _) _ = error "Loops not allowed in WLP"
 wlp _ _ = error "wlp: TODO"
 
 runWLP :: Program -> Pred
 runWLP Program{..} = wlp programBody $ BoolLit True
 
--- wlp (Let ds sts) q = do
---   nNm <- mapM fresh ds
-  
-wlp _ _ = error "wlp: TODO"
 
+preprocess :: Program -> Program
+preprocess = runRemoveShadowing . unrollLoops  
+
+unroll :: Int -> Expr -> Stmt -> Stmt
+unroll 0 g _ = Assert (-g)
+unroll n g s = If g (Seq s $ unroll (n - 1) g s) Skip
+
+
+
+unrollLoops :: Program -> Program
+unrollLoops Program{..} =
+  case programBody of
+    -- recursion schemes
+    (While g s) -> Program{programBody=unroll 10 g s, ..}
+    _ -> Program{..}
 
 fresh :: Id -> State Counter Id 
 fresh name = do
@@ -70,7 +76,6 @@ substStmt id nid (AssignIndex i e1 e2) = return $ AssignIndex cid (subst id (Var
   where cid = if i == id then nid else i
 substStmt id nid (Let _ s) = substStmt id nid s
 
-
 removeShadowingStmt :: Stmt -> State Counter Stmt
 removeShadowingStmt (Let dcs s) = do
   ns <- removeShadowingStmt s
@@ -80,14 +85,16 @@ removeShadowingStmt (Let dcs s) = do
   nS <- foldM (flip $ uncurry substStmt) ns $ zip names tr
   return $ Let nD nS
 
-
-removeShadowingExec :: Program -> State Counter Program
-removeShadowingExec Program{..} = do
+removeShadowing :: Program -> State Counter Program
+removeShadowing Program{..} = do
   programBody <- removeShadowingStmt programBody
   return Program{..}
 
-removeShadowing :: Program -> Program
-removeShadowing p = execState (removeShadowingExec p) 0
+runRemoveShadowing :: Program -> Program
+runRemoveShadowing p = evalState (removeShadowing p) 0
+
+verify :: Program -> Pred
+verify = runWLP . preprocess
 
 -- Program{programBody= {} , ..}
 -- p {programBody = {}}
