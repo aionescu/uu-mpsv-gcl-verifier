@@ -7,7 +7,6 @@ import System.Environment(getArgs)
 
 import Language.GCL.InitChecking(initCheck)
 import Language.GCL.Parser(parse)
-import Language.GCL.PrettyPrint(pPrint)
 import Language.GCL.TypeChecking(typeCheck)
 import Language.GCL.Verification(runWLP)
 
@@ -20,4 +19,4 @@ main = do
     >>= typeCheck
     >>= initCheck
     <&> runWLP
-    & either T.putStrLn pPrint
+    & either T.putStrLn print

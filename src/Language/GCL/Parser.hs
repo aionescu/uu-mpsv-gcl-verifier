@@ -11,7 +11,7 @@ import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer qualified as L
 
-import Language.GCL.Syntax
+import Language.GCL.Syntax hiding (block, decls)
 
 type Parser = Parsec Void Text
 
