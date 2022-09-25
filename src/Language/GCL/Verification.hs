@@ -1,9 +1,7 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 module Language.GCL.Verification(runWLP) where
 import Language.GCL.Syntax
 import Control.Monad.State.Strict(State, get, put, evalState)
-import Control.Monad(foldM)
 import Language.GCL.Utils
 
 type Counter = Int
@@ -63,18 +61,26 @@ fresh name = do
   put $ c + 1
   return $ "$" <> name <> (showT c)
 
-substStmt :: Id -> Id -> Stmt -> State Counter Stmt
-substStmt id nid (Assign i e) = return $ Assign cid $ subst id (Var nid) e
+substStmt :: Id -> Id -> Stmt -> Stmt
+substStmt id nid (Assign i e) = Assign cid $ subst id (Var nid) e
   where cid = if i == id then nid else i
-substStmt id nid (Seq s1 s2) = do
-  l <- substStmt id nid s2
-  r <- substStmt id nid s1
-  return $ Seq l r
-substStmt id nid (Assert e) = return $ Assert $ subst id (Var nid) e
-substStmt id nid (Assume e) = return $ Assume $ subst id (Var nid) e
-substStmt id nid (AssignIndex i e1 e2) = return $ AssignIndex cid (subst id (Var nid) e1) (subst id (Var nid) e2)
+substStmt id nid (Seq s1 s2) = Seq l r
+  where l = substStmt id nid s2
+        r = substStmt id nid s1
+substStmt id nid (Assert e) = Assert $ subst id (Var nid) e
+substStmt id nid (Assume e) = Assume $ subst id (Var nid) e
+substStmt id nid (AssignIndex i e1 e2) = AssignIndex cid (subst id (Var nid) e1) (subst id (Var nid) e2)
   where cid = if i == id then nid else i
 substStmt id nid (Let _ s) = substStmt id nid s
+substStmt id nid (If e s1 s2) = If ne ns1 ns2
+  where ne = subst id (Var nid) e
+        ns1 = substStmt id nid s1
+        ns2 = substStmt id nid s2
+substStmt id nid (While e s1) = While ne ns1
+  where ne = subst id (Var nid) e
+        ns1 = substStmt id nid s1
+substStmt _ _ e = e
+
 
 removeShadowingStmt :: Stmt -> State Counter Stmt
 removeShadowingStmt (Let dcs s) = do
@@ -82,8 +88,21 @@ removeShadowingStmt (Let dcs s) = do
   let names = map (\Decl{..} -> declName) dcs
   tr <- mapM fresh names
   let nD = map (\(Decl{..}, n) -> Decl{declName=n, declType}) $ zip dcs tr
-  nS <- foldM (flip $ uncurry substStmt) ns $ zip names tr
+  let nS = foldl (flip $ uncurry substStmt) ns $ zip names tr
   return $ Let nD nS
+removeShadowingStmt (If e s1 s2) = do
+    ns1 <- removeShadowingStmt s1
+    ns2 <- removeShadowingStmt s2
+    return $ If e ns1 ns2
+removeShadowingStmt (While e s) = do
+    ns <- removeShadowingStmt s
+    return $ While e ns
+removeShadowingStmt (Seq s1 s2) = do
+    ns1 <- removeShadowingStmt s1
+    ns2 <- removeShadowingStmt s2
+    return $ Seq ns1 ns2
+removeShadowingStmt s = return s
+
 
 removeShadowing :: Program -> State Counter Program
 removeShadowing Program{..} = do
@@ -96,6 +115,5 @@ runRemoveShadowing p = evalState (removeShadowing p) 0
 verify :: Program -> Pred
 verify = runWLP . preprocess
 
--- Program{programBody= {} , ..}
--- p {programBody = {}}
+
 
