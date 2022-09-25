@@ -1,19 +1,19 @@
 module Language.GCL.Eval(Val(..), eval) where
 
-import Control.Category((>>>))
+import Control.Applicative(liftA2, (<|>))
 import Control.Monad.State.Strict(State, evalState, gets, modify)
-import Data.Fix(Fix(..))
 import Data.Function(on)
+import Data.Functor.Foldable(cata)
 import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as M
-import Data.Maybe(fromJust)
 import Data.Vector(Vector)
 import Data.Vector qualified as V
 import Data.Set(Set)
 import Data.Set qualified as S
-import Text.Read(readMaybe)
+import Text.Read(Read(..), ReadPrec)
 
 import Language.GCL.Syntax
+import Language.GCL.Utils((...))
 
 data Val
   = I { unI :: Int }
@@ -26,14 +26,12 @@ instance Show Val where
   show (B b) = show b
   show (A a) = show a
 
-instance Num Val where
-  (+) = (I .) . (+) `on` unI
-  (-) = (I .) . (-) `on` unI
-  (*) = (I .) . (*) `on` unI
-
-  abs = I . abs . unI
-  signum = I . signum . unI
-  fromInteger = I . fromInteger
+instance Read Val where
+  readPrec :: ReadPrec Val
+  readPrec =
+    I <$> readPrec @Int
+    <|> B <$> readPrec @Bool
+    <|> A <$> readPrec @(Vector Val)
 
 type Env = Map Id Val
 type Eval = State Env
@@ -48,47 +46,44 @@ shadow vs m = do
   modify \m -> env <> M.withoutKeys m vs
   pure a
 
-evalOp :: BinOp -> Expr -> Expr -> Eval Val
-evalOp And a b = evalExpr a >>= \case
-  B True -> evalExpr b
+evalOp :: BinOp -> Eval Val -> Eval Val -> Eval Val
+evalOp Add = liftA2 (I ... (+) `on` unI)
+evalOp Sub = liftA2 (I ... (-) `on` unI)
+evalOp Mul = liftA2 (I ... (*) `on` unI)
+evalOp Div = liftA2 (I ... quot `on` unI)
+evalOp Eq = liftA2 $ B ... (==)
+evalOp Neq = liftA2 $ B ... (/=)
+evalOp Lt = liftA2 $ B ... (<)
+evalOp Lte = liftA2 $ B ... (<=)
+evalOp Gt = liftA2 $ B ... (>)
+evalOp Gte = liftA2 $ B ... (>=)
+evalOp And = \a b -> a >>= \case
+  B True -> b
   a -> pure a
-evalOp Or a b = evalExpr a >>= \case
-  B False -> evalExpr b
+evalOp Or = \a b -> a >>= \case
+  B False -> b
   a -> pure a
-evalOp Implies a b = evalExpr a >>= \case
+evalOp Implies = \a b -> a >>= \case
   B False -> pure $ B True
-  _ -> evalExpr b
-evalOp o a b = op o <$> evalExpr a <*> evalExpr b
-  where
-    op Add = (+)
-    op Sub = (-)
-    op Mul = (*)
-    op Div = (I .) . quot `on` unI
-    op Eq = (B .) . (==)
-    op Neq = (B .) . (/=)
-    op Lt = (B .) . (<)
-    op Lte = (B .) . (<=)
-    op Gt = (B .) . (>)
-    op Gte = (B .) . (>=)
-    op _ = error "op: Unreachable"
+  _ -> b
+
+instantiate :: Id -> Eval Val -> Int -> Eval Val
+instantiate v e i = modify (M.insert v $ I i) *> e
 
 evalExpr :: Expr -> Eval Val
-evalExpr = unFix >>> \case
+evalExpr = cata \case
   IntLit i -> pure $ I i
   BoolLit b -> pure $ B b
   Var v -> lookupVar v
   Length v -> I . V.length . unA <$> lookupVar v
   BinOp o a b -> evalOp o a b
-  Negate e -> evalExpr e >>= \case
+  Negate e -> e >>= \case
     I i -> pure $ I $ negate i
     B b -> pure $ B $ not b
     _ -> error "evalExpr: Unreachable"
-  Subscript v e -> (V.!) <$> (unA <$> lookupVar v) <*> (unI <$> evalExpr e)
+  Subscript v e -> (V.!) <$> (unA <$> lookupVar v) <*> (unI <$> e)
   Forall v e -> shadow (S.singleton v) $ B . all unB <$> traverse (instantiate v e) [-100 .. 100]
   Exists v e -> shadow (S.singleton v) $ B . any unB <$> traverse (instantiate v e) [-100 .. 100]
-
-instantiate :: Id -> Expr -> Int -> Eval Val
-instantiate v e i = modify (M.insert v $ I i) *> evalExpr e
 
 evalStmt :: Stmt -> Eval ()
 evalStmt Skip = pure ()
@@ -113,17 +108,10 @@ evalStmt w@(While g s) = evalExpr g >>= \case
 evalStmt (Seq a b) = evalStmt a *> evalStmt b
 evalStmt (Let ds s) = shadow (S.fromList $ declName <$> ds) $ evalStmt s
 
-readVal :: Type -> String -> Maybe Val
-readVal Int s = I <$> readMaybe @Int s
-readVal Bool s = B <$> readMaybe @Bool s
-readVal (Array Int) s = A . fmap I <$> readMaybe @(Vector Int) s
-readVal (Array Bool) s = A . fmap B <$> readMaybe @(Vector Bool) s
-readVal _ _ = error "readVal: Ill-formed type"
-
 getInputs :: [Decl] -> [String] -> Env
 getInputs ds vs
   | length ds /= length vs = error "Invalid number of arguments"
-  | otherwise = M.fromList $ zipWith (\(Decl v t) s -> (v, fromJust $ readVal t s)) ds vs
+  | otherwise = M.fromList $ zipWith (\(Decl v _) s -> (v, read s)) ds vs
 
 eval :: [String] -> Program -> Val
 eval args (Program _ i d@(Decl v _) b) =
