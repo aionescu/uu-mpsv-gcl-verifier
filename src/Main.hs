@@ -5,7 +5,6 @@ import Data.Functor((<&>))
 import Data.Text.IO qualified as T
 import System.Environment(getArgs)
 
-import Language.GCL.InitChecking(initCheck)
 import Language.GCL.Parser(parse)
 import Language.GCL.TypeChecking(typeCheck)
 import Language.GCL.Verification(runWLP)
@@ -17,6 +16,5 @@ main = do
 
   parse path code
     >>= typeCheck
-    >>= initCheck
     <&> runWLP
     & either T.putStrLn print

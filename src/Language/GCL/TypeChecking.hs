@@ -1,13 +1,10 @@
 module Language.GCL.TypeChecking(typeCheck) where
 
-import Control.Category((>>>))
-import Control.Monad(unless)
 import Control.Monad.Except(throwError)
 import Control.Monad.Reader(ReaderT, asks, local, runReaderT)
 import Data.Bifunctor(first)
-import Data.Fix(Fix(..))
-import Data.Foldable(fold)
-import Data.Functor(($>), void)
+import Data.Functor(($>), (<&>), void)
+import Data.Functor.Foldable(cata)
 import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as M
 import Data.Text(Text)
@@ -23,45 +20,45 @@ lookupVar v = asks (M.!? v) >>= \case
   Nothing -> throwError $ "Undeclared variable " <> v
   Just ty -> pure ty
 
-mustBe :: Type -> Type -> TC ()
-mustBe expected actual =
-  unless (expected == actual)
-  $ throwError $ "Expected " <> showT expected <> ", found " <> showT actual
-
 unArray :: Type -> TC Type
 unArray (Array a) = pure a
 unArray t = throwError $ "Expected array type, found " <> showT t
 
-typeCheckExpr :: Type -> Expr -> TC ()
-typeCheckExpr expected e = typeInferExpr e >>= mustBe expected
+unPrim :: Type -> TC Type
+unPrim t@Array{} = throwError $ "Expected primitive type, found " <> showT t
+unPrim t = pure t
+
+check :: Type -> TC Type -> TC Type
+check expected m = m >>= \t ->
+  if t == expected
+  then pure t
+  else throwError $ "Expected " <> showT expected <> ", found " <> showT t
 
 typeInferExpr :: Expr -> TC Type
-typeInferExpr = unFix >>> \case
+typeInferExpr = cata \case
   IntLit{} -> pure Int
   BoolLit{} -> pure Bool
   Var v -> lookupVar v
   Length v -> (lookupVar v >>= unArray) $> Int
   BinOp op a b
-    | op `elem` [Add, Sub, Mul, Div] -> typeCheckExpr Int a *> typeCheckExpr Int b $> Int
-    | op `elem` [And, Or, Implies] -> typeCheckExpr Bool a *> typeCheckExpr Bool b $> Bool
-    | op `elem` [Eq, Neq, Lt, Lte, Gt, Gte] -> typeCheckExpr Int a *> typeCheckExpr Int b $> Bool
+    | op `elem` [Add, Sub, Mul, Div] -> check Int a *> check Int b $> Int
+    | op `elem` [And, Or, Implies] -> check Bool a *> check Bool b $> Bool
+    | op `elem` [Eq, Neq, Lt, Lte, Gt, Gte] -> check Int a *> check Int b $> Bool
     | otherwise -> error "typeInferExpr: Unreachable"
-  Negate e -> typeInferExpr e >>= \case
-    t@Array{} -> throwError $ "Expected primitive type, found " <> showT t
-    t -> pure t
-  Subscript v e -> typeCheckExpr Int e *> lookupVar v >>= unArray
-  Forall v e -> withDecls [Decl v Int] $ typeCheckExpr Bool e $> Bool
-  Exists v e -> withDecls [Decl v Int] $ typeCheckExpr Bool e $> Bool
+  Negate e -> e >>= unPrim
+  Subscript v e -> check Int e *> lookupVar v >>= unArray
+  Forall v e -> with [Decl v Int] $ check Bool e $> Bool
+  Exists v e -> with [Decl v Int] $ check Bool e $> Bool
 
-typeCheckDecl :: Decl -> TC Env
-typeCheckDecl (Decl v t) = asks (M.!? v) >>= \case
-  Just _ -> throwError $ "Cannot shadow variable " <> v
-  Nothing -> pure $ M.singleton v t
+typeCheckExpr :: Type -> Expr -> TC ()
+typeCheckExpr t e = void $ check t $ typeInferExpr e
 
-withDecls :: [Decl] -> TC a -> TC a
-withDecls ds m = do
-  ds <- traverse typeCheckDecl ds
-  local (fold ds <>) m
+with :: [Decl] -> TC a -> TC a
+with ds m
+  | M.size env /= length ds = throwError "Cannot shadow within the same binding"
+  | otherwise = local (env <>) m
+  where
+    env = M.fromList $ ds <&> \(Decl v t) -> (v, t)
 
 typeCheckStmt :: Stmt -> TC ()
 typeCheckStmt Skip = pure ()
@@ -73,7 +70,7 @@ typeCheckStmt (AssignIndex v i e) =
 typeCheckStmt (If g t e) = typeCheckExpr Bool g *> typeCheckStmt t *> typeCheckStmt e
 typeCheckStmt (While g s) = typeCheckExpr Bool g *> typeCheckStmt s
 typeCheckStmt (Seq a b) = typeCheckStmt a *> typeCheckStmt b
-typeCheckStmt (Let ds s) = withDecls ds $ typeCheckStmt s
+typeCheckStmt (Let ds s) = with ds $ typeCheckStmt s
 
 typeCheck :: Program -> Either Text Program
 typeCheck p@(Program _ i o b) =

@@ -3,10 +3,7 @@ module Language.GCL.Syntax where
 import Data.Fix(Fix(..))
 import Data.Functor.Classes(Show1(..), showsPrec1)
 import Data.List(intercalate)
-import Data.Text(Text)
-import Data.Text qualified as T
-
-import Language.GCL.Utils((...))
+import Data.Text(Text, unpack)
 
 type Id = Text
 
@@ -31,12 +28,6 @@ data BinOp
   | Gt
   | Gte
   deriving Eq
-
-isCommutative :: BinOp -> Bool
-isCommutative o = o `elem` [Add, Mul]
-
-isAssociative :: BinOp -> Bool
-isAssociative o = o `elem` [Add, Mul, And, Or]
 
 data ExprF e
   = IntLit Int
@@ -76,45 +67,6 @@ data Program = Program
     programOutput :: Decl,
     programBody :: Stmt
   }
-
--- Helpers for cleaner syntax
-
-instance Num Expr where
-  fromInteger = Fix . IntLit . fromInteger
-  (+) = Fix ... BinOp Add
-  (-) = Fix ... BinOp Sub
-  (*) = Fix ... BinOp Mul
-  negate = Fix . Negate
-  abs = undefined
-  signum = undefined
-
-instance Fractional Expr where
-  (/) = Fix ... BinOp Div
-  fromRational = undefined
-
-pattern I :: Int -> Expr
-pattern I i = Fix (IntLit i)
-
-pattern B :: Bool -> Expr
-pattern B b = Fix (BoolLit b)
-
-pattern T :: Expr
-pattern T = B True
-
-pattern F :: Expr
-pattern F = B False
-
-pattern (:&&) :: Expr -> Expr -> Expr
-pattern a :&& b = Fix (BinOp And a b)
-infixr 3 :&&
-
-pattern (:||) :: Expr -> Expr -> Expr
-pattern a :|| b = Fix (BinOp Or a b)
-infixr 2 :||
-
-pattern (:=>) :: Expr -> Expr -> Expr
-pattern a :=> b = Fix (BinOp Implies a b)
-infixr 1 :=>
 
 -- Show instances
 
@@ -157,7 +109,7 @@ precedence = \case
   Implies -> 2
 
 showText :: Text -> ShowS
-showText = showString . T.unpack
+showText = showString . unpack
 
 instance Show1 ExprF where
   liftShowsPrec :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> ExprF a -> ShowS
@@ -179,7 +131,7 @@ instance {-# OVERLAPPING #-} Show Expr where
   showsPrec p = showsPrec1 p . unFix
 
 instance Show Decl where
-  show (Decl v t) = T.unpack v <> ": " <> show t
+  show (Decl v t) = unpack v <> ": " <> show t
 
 decls :: [Decl] -> String
 decls ds = intercalate ", " $ show <$> ds
@@ -193,8 +145,8 @@ instance Show Stmt where
     Skip -> "skip;"
     Assume e -> "assume " <> show e <> ";"
     Assert e -> "assert " <> show e <> ";"
-    Assign v e -> T.unpack v <> " = " <> show e <> ";"
-    AssignIndex v i e -> T.unpack v <> "[" <> show i <> "] = " <> show e <> ";"
+    Assign v e -> unpack v <> " = " <> show e <> ";"
+    AssignIndex v i e -> unpack v <> "[" <> show i <> "] = " <> show e <> ";"
     If e s Skip -> "if " <> show e <> block s
     If e s s2 -> "if " <> show e <> block s <> " else" <> block s2
     While e s -> "while " <> show e <> block s
@@ -202,4 +154,4 @@ instance Show Stmt where
     Let ds s -> "let " <> decls ds <> block s
 
 instance Show Program where
-  show (Program n i o b) = T.unpack n <> "(" <> decls i <> ") -> " <> show o <> block b
+  show (Program n i o b) = unpack n <> "(" <> decls i <> ") -> " <> show o <> block b

@@ -5,13 +5,13 @@ swap(i: Int, j: Int) -> a: [Int] {
   assume 0 < #a && 0 <= i && i < #a && 0 <= j && j < #a;
 
   let i': Int, j': Int, tmp: Int {
-      i' = a[i];
-      j' = a[j];
+    i' = a[i];
+    j' = a[j];
 
-      tmp = a[i];
-      a[i] = a[j];
-      a[j] = tmp;
+    tmp = a[i];
+    a[i] = a[j];
+    a[j] = tmp;
 
-      assert a[i] == j' && a[j] == i';
+    assert a[i] == j' && a[j] == i';
   }
 }

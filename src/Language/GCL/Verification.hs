@@ -4,6 +4,41 @@ import Data.Fix(Fix(..))
 import Data.Functor.Foldable(cata, para)
 
 import Language.GCL.Syntax
+import Language.GCL.Utils((...))
+
+---------- Helpers for nicer syntax ----------
+
+pattern I :: Int -> Expr
+pattern I i = Fix (IntLit i)
+
+pattern B :: Bool -> Expr
+pattern B b = Fix (BoolLit b)
+
+pattern T :: Expr
+pattern T = B True
+
+pattern F :: Expr
+pattern F = B False
+
+(∧) :: Expr -> Expr -> Expr
+(∧) = Fix ... BinOp And
+
+(∨) :: Expr -> Expr -> Expr
+(∨) = Fix ... BinOp Or
+
+(⟹) :: Expr -> Expr -> Expr
+(⟹) = Fix ... BinOp Implies
+
+(¬) :: Expr -> Expr
+(¬) = Fix . Negate
+
+---------- Simplification ----------
+
+isCommutative :: BinOp -> Bool
+isCommutative o = o `elem` [Add, Mul]
+
+isAssociative :: BinOp -> Bool
+isAssociative o = o `elem` [Add, Mul, And, Or]
 
 simplify :: Pred -> Pred
 simplify = cata go
@@ -25,32 +60,34 @@ simplify = cata go
       BinOp Implies a F -> go $ Negate a
 
       Negate (B b) -> B $ not b
-      Negate (I i) -> I $ -i
+      Negate (I i) -> I -i
 
       BinOp o (I a) (I b)
-        | Add <- o -> I (a + b)
-        | Sub <- o -> I (a - b)
-        | Mul <- o -> I (a * b)
-        | Div <- o -> I (a `quot` b)
+        | Add <- o -> I $ a + b
+        | Sub <- o -> I $ a - b
+        | Mul <- o -> I $ a * b
+        | Div <- o -> I $ a `quot` b
 
-        | Eq <- o -> B (a == b)
-        | Neq <- o -> B (a /= b)
-        | Lt <- o -> B (a < b)
-        | Lte <- o -> B (a <= b)
-        | Gt <- o -> B (a > b)
-        | Gte <- o -> B (a >= b)
+        | Eq <- o -> B $ a == b
+        | Neq <- o -> B $ a /= b
+        | Lt <- o -> B $ a < b
+        | Lte <- o -> B $ a <= b
+        | Gt <- o -> B $ a > b
+        | Gte <- o -> B $ a >= b
 
       BinOp o (Fix (Var a)) (Fix (Var a'))
         | a == a' && o `elem` [Eq, Lte, Gte] -> T
         | a == a' && o `elem` [Neq, Lt, Gt] -> F
 
       BinOp o (Fix (BinOp o' a b)) c
-        | o == o' && isAssociative o -> go $ BinOp o a $ Fix $ BinOp o b c
+        | o == o' && isAssociative o -> go $ BinOp o a $ go $ BinOp o b c
 
       BinOp o a@I{} b
         | isCommutative o -> go $ BinOp o b a
 
       p -> Fix p
+
+---------- Verification ----------
 
 subst :: Id -> Expr -> Pred -> Pred
 subst i e = para \case
@@ -61,18 +98,18 @@ subst i e = para \case
   p -> Fix $ snd <$> p
 
 unroll :: Int -> Expr -> Stmt -> Stmt
-unroll 0 g _ = Assert (-g)
+unroll 0 g _ = Assert $ (¬)g
 unroll n g s = If g (Seq s $ unroll (n - 1) g s) Skip
 
 wlp :: Stmt -> Pred -> Pred
 wlp Skip q = q
 wlp (Assign i e) q = subst i e q
 wlp (Seq s₁ s₂) q = wlp s₁ $ wlp s₂ q
-wlp (Assert e) q = e :&& q
-wlp (Assume e) q = e :=> q
-wlp (If g s₁ s₂) q = (g :=> wlp s₁ q) :&& (-g :=> wlp s₂ q)
+wlp (Assert e) q = e ∧ q
+wlp (Assume e) q = e ∨ q
+wlp (If g s₁ s₂) q = (g ⟹ wlp s₁ q) ∧ ((¬)g ⟹ wlp s₂ q)
 wlp (While g s) q = wlp (unroll 10 g s) q
-wlp _ _ = error "wlp: TODO"
+wlp s _ = error $ "WLP not yet implemented for: " <> show (show s)
 
 runWLP :: Program -> Pred
 runWLP Program{..} = wlp programBody T
