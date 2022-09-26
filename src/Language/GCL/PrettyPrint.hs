@@ -71,6 +71,7 @@ instance Pretty Expr where
   pp' _ (Subscript v e) = v <> "[" <> pp e <> "]"
   pp' p (Forall v e) = paren p 1 $ "forall " <> v <> ". " <> pp e
   pp' p (Exists v e) = paren p 1 $ "exists " <> v <> ". " <> pp e
+  pp' _ (Conditional c a b) = "(" <> pp c <> " -> " <> pp a <> " | " <> pp b <> ")"
 
 instance Pretty Decl where
   pp (Decl v t) = v <> ": " <> pp t

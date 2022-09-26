@@ -18,9 +18,9 @@ subst i fe v@(Length x)
 subst i fe (BinOp op lhs rhs) = BinOp op (subst i fe lhs) (subst i fe rhs)
 subst i fe (Negate rhs) = Negate $ subst i fe rhs
 subst i fe (Subscript v s)
-  | i == v = fe nst
-  | otherwise = Subscript v nst
-  where nst = subst i fe s
+  | i == v = fe new
+  | otherwise = new
+  where new = Subscript v $ subst i fe s
 subst i fe f@(Forall v p)
   | i == v = f
   | otherwise = Forall v $ subst i fe p
@@ -32,7 +32,7 @@ subst i fe (Conditional c e1 e2) = Conditional (tr c) (tr e1) (tr e2)
 
 repby :: Expr -> Expr -> (Expr -> Expr)
 repby i as = \ex -> case ex of
-  sub@(Subscript _ s) -> Conditional (BinOp Eq i s) as sub
+  sub@(Subscript _ s) -> Conditional (BinOp Eq s i) as sub
   z -> z
 
 
@@ -63,7 +63,6 @@ unroll n g s = If g (Seq s $ unroll (n - 1) g s) Skip
 unrollLoops :: Program -> Program
 unrollLoops Program{..} =
   case programBody of
-    -- recursion schemes
     (While g s) -> Program{programBody=unroll 10 g s, ..}
     _ -> Program{..}
 
