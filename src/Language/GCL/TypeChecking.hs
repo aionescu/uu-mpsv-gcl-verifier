@@ -31,6 +31,7 @@ unArray (Array a) = pure a
 unArray t = throwError $ "Expected array type, found " <> showT t
 
 typeCheckExpr :: Type -> Expr -> TC ()
+typeCheckExpr _ (Conditional _ _ _) = throwError $ "If is not supported in expressions"
 typeCheckExpr expected e = typeInferExpr e >>= mustBe expected
 
 typeInferExpr :: Expr -> TC Type
@@ -49,6 +50,7 @@ typeInferExpr (Negate e) = typeInferExpr e >>= \case
 typeInferExpr (Subscript v e) = typeCheckExpr Int e *> lookupVar v >>= unArray
 typeInferExpr (Forall v e) = withDecls [Decl v Int] $ typeCheckExpr Bool e $> Bool
 typeInferExpr (Exists v e) = withDecls [Decl v Int] $ typeCheckExpr Bool e $> Bool
+typeInferExpr  _ = throwError $ "It is not supported" 
 
 typeCheckDecl :: Decl -> TC Env
 typeCheckDecl (Decl v t) = asks (M.!? v) >>= \case
