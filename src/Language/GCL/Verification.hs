@@ -30,8 +30,11 @@ subst i fe f@(Exists v p)
 subst i fe (Conditional c e1 e2) = Conditional (tr c) (tr e1) (tr e2)
   where tr = subst i fe
 
--- repby :: Expr -> Pred -> Pred
--- repby s@(Subscript i e) = s
+repby :: Expr -> Expr -> (Expr -> Expr)
+repby i as = \ex -> case ex of
+  sub@(Subscript _ s) -> Conditional (BinOp Eq i s) as sub
+  z -> z
+
 
 wlp :: Stmt -> Pred -> Pred
 wlp Skip q = q
@@ -40,8 +43,8 @@ wlp (Seq s₁ s₂) q = wlp s₁ $ wlp s₂ q
 wlp (Assert e) q = e :&& q
 wlp (Assume e) q = e :=> q
 wlp (If g s₁ s₂) q = (g :=> wlp s₁ q) :&& (-g :=> wlp s₂ q)
--- wlp (AssignIndex ad i as) q = 
---   where repby = Conditional 
+wlp (AssignIndex ad i as) q = subst ad trans q
+  where trans = repby i as
 wlp (While _ _) _ = error "Loops not allowed in WLP"
 wlp _ _ = error "wlp: TODO"
 
