@@ -31,7 +31,7 @@ subst i fe (Conditional c e1 e2) = Conditional (tr c) (tr e1) (tr e2)
   where tr = subst i fe
 
 repby :: Expr -> Expr -> (Expr -> Expr)
-repby i as = \ex -> case ex of
+repby i as = \case
   sub@(Subscript _ s) -> Conditional (BinOp Eq s i) as sub
   z -> z
 
@@ -70,7 +70,7 @@ fresh :: Id -> State Counter Id
 fresh name = do
   c <- get
   put $ c + 1
-  return $ "$" <> name <> (showT c)
+  return $ "$" <> name <> showT c
 
 substStmt :: Id -> Id -> Stmt -> Stmt
 substStmt id nid (Assign i e) = Assign cid $ subst id (const (Var nid)) e
@@ -98,7 +98,7 @@ removeShadowingStmt (Let dcs s) = do
   ns <- removeShadowingStmt s
   let names = map (\Decl{..} -> declName) dcs
   tr <- mapM fresh names
-  let nD = map (\(Decl{..}, n) -> Decl{declName=n, declType}) $ zip dcs tr
+  let nD = zipWith (\Decl{..} n -> Decl{declName=n, declType}) dcs tr
   let nS = foldl (flip $ uncurry substStmt) ns $ zip names tr
   return $ Let nD nS
 removeShadowingStmt (If e s1 s2) = do
