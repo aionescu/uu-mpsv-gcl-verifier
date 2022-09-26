@@ -36,6 +36,7 @@ data Expr
   | Subscript Id Expr
   | Forall Id Expr
   | Exists Id Expr
+  | Conditional Expr Expr Expr
   deriving (Show)
 
 type Pred = Expr
