@@ -1,13 +1,15 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 module Language.GCL.Verification.Preprocessing where
 
-import Data.Fix(Fix(..))
-import Data.Functor.Foldable(cata, para)
-
 import Language.GCL.Syntax
-import Language.GCL.Utils((...))
+import Control.Monad.State (State, get, put, evalState)
+import Language.GCL.Utils (showT)
+import Control.Monad (foldM)
+
+type Counter = Int
 
 preprocess :: Program -> Program
-preprocess = runRemoveShadowing . unrollLoops  
+preprocess = runRemoveShadowing . unrollLoops
 
 unroll :: Int -> Expr -> Stmt -> Stmt
 unroll 0 g _ = Assert (-g)
@@ -20,11 +22,11 @@ unrollLoops Program{..} =
     (While g s) -> Program{programBody=unroll 10 g s, ..}
     _ -> Program{..}
 
-fresh :: Id -> State Counter Id 
+fresh :: Id -> State Counter Id
 fresh name = do
   c <- get
   put $ c + 1
-  return $ "$" <> name <> (showT c)
+  return $ "$" <> name <> showT c
 
 substStmt :: Id -> Id -> Stmt -> State Counter Stmt
 substStmt id nid (Assign i e) = return $ Assign cid $ subst id (Var nid) e
@@ -44,7 +46,7 @@ removeShadowingStmt (Let dcs s) = do
   ns <- removeShadowingStmt s
   let names = map (\Decl{..} -> declName) dcs
   tr <- mapM fresh names
-  let nD = map (\(Decl{..}, n) -> Decl{declName=n, declType}) $ zip dcs tr
+  let nD = zipWith (curry (\(Decl{..}, n) -> Decl{declName=n, declType})) dcs tr
   nS <- foldM (flip $ uncurry substStmt) ns $ zip names tr
   return $ Let nD nS
 

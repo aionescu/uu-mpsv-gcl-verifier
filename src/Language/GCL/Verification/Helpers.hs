@@ -1,7 +1,6 @@
 module Language.GCL.Verification.Helpers where
 
 import Data.Fix(Fix(..))
-import Data.Functor.Foldable(cata, para)
 
 import Language.GCL.Syntax
 import Language.GCL.Utils((...))

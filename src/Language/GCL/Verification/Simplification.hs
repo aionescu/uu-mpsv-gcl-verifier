@@ -1,10 +1,10 @@
-module Language.GCL.Verification(simplify, runWLP) where
+module Language.GCL.Verification.Simplification(simplify) where
 
 import Data.Fix(Fix(..))
-import Data.Functor.Foldable(cata, para)
+import Data.Functor.Foldable(cata)
 
-import Language.GCL.Syntax
-import Language.GCL.Utils((...))
+import Language.GCL.Syntax ( BinOp(..), ExprF(BinOp, Negate, Var), Pred )
+import Language.GCL.Verification.Helpers ( pattern F, pattern T, pattern B, pattern I ) 
 
 
 isCommutative :: BinOp -> Bool
