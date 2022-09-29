@@ -8,7 +8,7 @@ import System.Environment(getArgs)
 import Language.GCL.Eval(eval)
 import Language.GCL.Parser(parse)
 import Language.GCL.TypeChecking(typeCheck)
-import Language.GCL.Verification(runWLP)
+import Language.GCL.Verify(verify)
 
 main :: IO ()
 main = do
@@ -18,7 +18,7 @@ main = do
   let
     runCmd = case cmd of
       "run" -> print . eval args
-      "wlp" -> print . runWLP
+      "wlp" -> print . verify
       _ -> error $ "Unknown command " <> show cmd
 
   parse path code

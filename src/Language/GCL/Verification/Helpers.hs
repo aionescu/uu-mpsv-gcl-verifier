@@ -28,3 +28,31 @@ pattern F = B False
 
 (¬) :: Expr -> Expr
 (¬) = Fix . Negate
+
+assertSt :: Expr -> Stmt
+assertSt = Fix . Assert
+
+assumeSt :: Expr -> Stmt
+assumeSt = Fix . Assume
+
+
+ifSt :: Expr -> Stmt -> Stmt -> Stmt
+ifSt e s1 s2= Fix $ If e s1 s2
+
+whileSt :: Expr -> Stmt -> Stmt
+whileSt e s = Fix $ While e s
+
+skipSt :: Stmt
+skipSt = Fix Skip
+
+seqSt :: Stmt -> Stmt ->Stmt
+seqSt a b = Fix $ Seq a b
+
+letSt :: [Decl] -> Stmt -> Stmt
+letSt dc st = Fix $ Let dc st
+
+assignIndexSt :: Id -> Expr -> Expr -> Stmt
+assignIndexSt i e e2 = Fix $ AssignIndex i e e2
+
+assignSt :: Id -> Expr -> Stmt
+assignSt i e = Fix $ Assign i e

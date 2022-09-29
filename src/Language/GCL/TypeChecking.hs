@@ -11,6 +11,7 @@ import Data.Text(Text)
 
 import Language.GCL.Syntax
 import Language.GCL.Utils(showT)
+import Data.Fix (Fix(..))
 
 type Env = Map Id Type
 type TC = ReaderT Env (Either Text)
@@ -60,17 +61,17 @@ with ds m
   where
     env = M.fromList $ ds <&> \(Decl v t) -> (v, t)
 
-typeCheckStmt :: Stmt -> TC ()
+typeCheckStmt :: StmtF Stmt -> TC ()
 typeCheckStmt Skip = pure ()
 typeCheckStmt (Assume e) = void $ typeCheckExpr Bool e
 typeCheckStmt (Assert e) = void $ typeCheckExpr Bool e
 typeCheckStmt (Assign v e) = lookupVar v >>= (`typeCheckExpr` e)
 typeCheckStmt (AssignIndex v i e) =
   typeCheckExpr Int i *> lookupVar v >>= unArray >>= (`typeCheckExpr` e)
-typeCheckStmt (If g t e) = typeCheckExpr Bool g *> typeCheckStmt t *> typeCheckStmt e
-typeCheckStmt (While g s) = typeCheckExpr Bool g *> typeCheckStmt s
-typeCheckStmt (Seq a b) = typeCheckStmt a *> typeCheckStmt b
-typeCheckStmt (Let ds s) = with ds $ typeCheckStmt s
+typeCheckStmt (If g t e) = typeCheckExpr Bool g *> typeCheckStmt (unFix t) *> typeCheckStmt (unFix e)
+typeCheckStmt (While g s) = typeCheckExpr Bool g *> typeCheckStmt (unFix s)
+typeCheckStmt (Seq a b) = typeCheckStmt (unFix a) *> typeCheckStmt (unFix b)
+typeCheckStmt (Let ds s) = with ds $ typeCheckStmt (unFix s)
 
 typeCheck :: Program -> Either Text Program
 typeCheck p@(Program _ i o b) =

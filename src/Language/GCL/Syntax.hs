@@ -1,7 +1,7 @@
 module Language.GCL.Syntax where
 
 import Data.Fix(Fix(..))
-import Data.Functor.Classes(Show1(..), showsPrec1)
+import Data.Functor.Classes(Show1(..), showsPrec1, )
 import Data.List(intercalate)
 import Data.Text(Text, unpack)
 
@@ -50,16 +50,20 @@ data Decl = Decl
     declType :: Type
   }
 
-data Stmt
+data StmtF e
   = Skip
   | Assume Expr
   | Assert Expr
   | Assign Id Expr
   | AssignIndex Id Expr Expr
-  | If Expr Stmt Stmt
-  | While Expr Stmt
-  | Seq Stmt Stmt
-  | Let [Decl] Stmt
+  | If Expr e e 
+  | While Expr e
+  | Seq e e
+  | Let [Decl] e
+  deriving (Functor, Foldable, Traversable)
+
+
+type Stmt = Fix StmtF
 
 data Program = Program
   { programName :: Id,
@@ -136,22 +140,25 @@ instance Show Decl where
 decls :: [Decl] -> String
 decls ds = intercalate ", " $ show <$> ds
 
-block :: Stmt -> String
-block Skip = " { }"
-block s = " {\n" <> unlines (("  " <>) <$> lines (show s)) <> "}"
+-- block :: StmtF a -> String
+-- block = \case 
+--   Skip -> " { }"
+--   s -> " {\n" <> unlines (("  " <>) <$> lines (show s)) <> "}"
 
-instance Show Stmt where
-  show = \case
-    Skip -> "skip;"
-    Assume e -> "assume " <> show e <> ";"
-    Assert e -> "assert " <> show e <> ";"
-    Assign v e -> unpack v <> " = " <> show e <> ";"
-    AssignIndex v i e -> unpack v <> "[" <> show i <> "] = " <> show e <> ";"
-    If e s Skip -> "if " <> show e <> block s
-    If e s s2 -> "if " <> show e <> block s <> " else" <> block s2
-    While e s -> "while " <> show e <> block s
-    Seq s s2 -> show s <> "\n" <> show s2
-    Let ds s -> "let " <> decls ds <> block s
+-- instance  Traversable StmtF 
 
-instance Show Program where
-  show (Program n i o b) = unpack n <> "(" <> decls i <> ") -> " <> show o <> block b
+-- instance Show Stmt where
+--   show = \case
+--     Skip -> "skip;"
+--     Assume e -> "assume " <> show e <> ";"
+--     Assert e -> "assert " <> show e <> ";"
+--     Assign v e -> unpack v <> " = " <> show e <> ";"
+--     AssignIndex v i e -> unpack v <> "[" <> show i <> "] = " <> show e <> ";"
+--     If e s Skip -> "if " <> show e <> block s
+--     If e s s2 -> "if " <> show e <> block s <> " else" <> block s2
+--     While e s -> "while " <> show e <> block s
+--     Seq s s2 -> show s <> "\n" <> show s2
+--     Let ds s -> "let " <> decls ds <> block s
+
+-- instance Show Program where
+--   show (Program n i o b) = unpack n <> "(" <> decls i <> ") -> " <> show o <> block b
