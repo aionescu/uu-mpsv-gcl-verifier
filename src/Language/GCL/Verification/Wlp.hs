@@ -2,7 +2,7 @@ module Language.GCL.Verification.Wlp(runWlp) where
 
 import Language.GCL.Syntax
 import Data.Functor.Foldable(para)
-import Language.GCL.Verification.Helpers (pattern T, (∧), (∨), (⟹), (¬) )
+import Language.GCL.Verification.Helpers (pattern T, (∧), (⟹), (¬) )
 import Data.Fix(Fix(..))
 
 subst :: Id -> Expr -> Pred -> Pred
@@ -20,8 +20,7 @@ wlp (Seq s₁ s₂) q = wlp (unFix s₁) $ wlp (unFix s₂) q
 wlp (Assert e) q = e ∧ q
 wlp (Assume e) q = e  ⟹ q
 wlp (If g s₁ s₂) q = (g ⟹ wlp (unFix s₁) q) ∧ ((¬)g ⟹ wlp (unFix s₂) q)
-wlp _ _ = error "WLP not yet implemented"
--- wlp s _ = error $ "WLP not yet implemented for: " <> show (show s)
+wlp s _ = error $ "WLP not yet implemented for: " <> show (Fix s)
 
 runWlp :: Program -> Pred
 runWlp Program{..} = wlp (unFix programBody) T
