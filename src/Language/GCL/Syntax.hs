@@ -1,7 +1,6 @@
 module Language.GCL.Syntax where
-
 import Data.Fix(Fix(..))
-import Data.Functor.Classes(Show1(..), showsPrec1, )
+import Data.Functor.Classes(Show1(..), showsPrec1)
 import Data.List(intercalate)
 import Data.Text(Text, unpack)
 
