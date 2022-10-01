@@ -1,4 +1,4 @@
-module Language.GCL.Verification.Wlp(runWLP) where
+module Language.GCL.Verification.Wlp(runWlp) where
 
 import Language.GCL.Syntax
 import Data.Functor.Foldable(para)
@@ -23,5 +23,5 @@ wlp (If g s₁ s₂) q = (g ⟹ wlp (unFix s₁) q) ∧ ((¬)g ⟹ wlp (unFix s�
 wlp _ _ = error "WLP not yet implemented"
 -- wlp s _ = error $ "WLP not yet implemented for: " <> show (show s)
 
-runWLP :: Program -> Pred
-runWLP Program{..} = wlp (unFix programBody) T
+runWlp :: Program -> Pred
+runWlp Program{..} = wlp (unFix programBody) T

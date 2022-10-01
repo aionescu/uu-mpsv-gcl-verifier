@@ -3,7 +3,7 @@ e(x: Int) -> y: Int {
   assume x == 0;
 
   while 0 < x {
-    x = x - 1;
+    x = x;
   }
 
   assert x == 0; -- Faulty
