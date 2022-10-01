@@ -14,7 +14,7 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 import Language.GCL.Syntax hiding (block, decls)
 import Language.GCL.Utils((...))
-import Language.GCL.Verification.Helpers (skipSt, assumeSt, assertSt, assignIndexSt, assignSt, ifSt, whileSt, letSt, seqSt)
+import Language.GCL.Syntax.Helpers (skipSt, assumeSt, assertSt, assignIndexSt, assignSt, ifSt, whileSt, letSt, seqSt)
 
 type Parser = Parsec Void Text
 

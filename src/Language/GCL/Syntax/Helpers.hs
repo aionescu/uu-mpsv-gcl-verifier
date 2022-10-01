@@ -1,4 +1,4 @@
-module Language.GCL.Verification.Helpers where
+module Language.GCL.Syntax.Helpers where
 
 import Data.Fix(Fix(..))
 

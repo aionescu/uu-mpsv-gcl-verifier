@@ -2,7 +2,7 @@ module Language.GCL.Verification.Wlp(runWlp) where
 
 import Language.GCL.Syntax
 import Data.Functor.Foldable(para)
-import Language.GCL.Verification.Helpers (pattern T, (∧), (⟹), (¬) )
+import Language.GCL.Syntax.Helpers (pattern T, (∧), (⟹), (¬) )
 import Data.Fix(Fix(..))
 
 subst :: Id -> Expr -> Pred -> Pred

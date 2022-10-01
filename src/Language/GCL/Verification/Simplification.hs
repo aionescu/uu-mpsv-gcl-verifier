@@ -4,7 +4,7 @@ import Data.Fix(Fix(..))
 import Data.Functor.Foldable(cata)
 
 import Language.GCL.Syntax ( BinOp(..), ExprF(BinOp, Negate, Var), Pred )
-import Language.GCL.Verification.Helpers ( pattern F, pattern T, pattern B, pattern I ) 
+import Language.GCL.Syntax.Helpers ( pattern F, pattern T, pattern B, pattern I ) 
 
 
 isCommutative :: BinOp -> Bool

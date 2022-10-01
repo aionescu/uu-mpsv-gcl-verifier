@@ -22,10 +22,10 @@ executable gcl
     Language.GCL.Eval
     Language.GCL.Parser
     Language.GCL.Syntax
+    Language.GCL.Syntax.Helpers
     Language.GCL.TypeChecking
     Language.GCL.Utils
     Language.GCL.Verification
-    Language.GCL.Verification.Helpers
     Language.GCL.Verification.Preprocessing
     Language.GCL.Verification.Simplification
     Language.GCL.Verification.Wlp

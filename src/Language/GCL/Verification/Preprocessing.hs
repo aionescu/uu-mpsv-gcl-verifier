@@ -4,7 +4,7 @@ import Language.GCL.Syntax
 import Control.Monad.State (State, get, put, evalState)
 import Data.Functor.Foldable(cata, Recursive (para))
 import Data.Fix(Fix(..))
-import Language.GCL.Verification.Helpers ( ifSt, skipSt, seqSt, (¬), assertSt, letSt, assignSt, assumeSt, assignIndexSt ) 
+import Language.GCL.Syntax.Helpers ( ifSt, skipSt, seqSt, (¬), assertSt, letSt, assignSt, assumeSt, assignIndexSt ) 
 import Data.Functor.Foldable.Monadic (cataM)
 import Language.GCL.Utils (showT)
 
