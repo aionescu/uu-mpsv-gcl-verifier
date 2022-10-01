@@ -8,7 +8,7 @@ import System.Environment(getArgs)
 import Language.GCL.Eval(eval)
 import Language.GCL.Parser(parse)
 import Language.GCL.TypeChecking(typeCheck)
-import Language.GCL.Verify(verify)
+import Language.GCL.Verification(verify)
 
 main :: IO ()
 main = do

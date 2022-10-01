@@ -1,4 +1,4 @@
-module Language.GCL.Verify(verify) where
+module Language.GCL.Verification(verify) where
 import Language.GCL.Syntax
 import Language.GCL.Verification.Preprocessing(preprocess)
 import Language.GCL.Verification.Wlp(runWlp)

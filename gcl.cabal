@@ -24,7 +24,7 @@ executable gcl
     Language.GCL.Syntax
     Language.GCL.TypeChecking
     Language.GCL.Utils
-    Language.GCL.Verify
+    Language.GCL.Verification
     Language.GCL.Verification.Helpers
     Language.GCL.Verification.Preprocessing
     Language.GCL.Verification.Simplification
