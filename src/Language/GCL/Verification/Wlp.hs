@@ -19,11 +19,6 @@ substSubscript id c e' = cata \case
   Subscript i e | i == id -> ifEqExpr e c e' $ Fix (Subscript i e)
   z -> Fix z
 
--- paratest :: Id -> Expr -> Pred -> Pred
--- paratest i e = para \case
---   (d, b) -> d
---   p -> Fix $ snd <$> p
-
 wlp :: StmtF Stmt -> Pred -> Pred
 wlp Skip q = q
 wlp (Assign i e) q = subst i e q
