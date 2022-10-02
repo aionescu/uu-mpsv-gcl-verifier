@@ -1,0 +1,17 @@
+-- This program checks that shadowing works as intended.
+
+shadow(x: Int) -> y: Int {
+  assume x == 0 && y == 0;
+
+  let x: Int {
+    x = 3;
+    y = x;
+  }
+
+  let y: Int {
+    y = 7;
+    x = y;
+  }
+
+  assert x == 7 && y == 3;
+}

@@ -5,19 +5,23 @@ import Data.Functor((<&>))
 import Data.Text.IO qualified as T
 import System.Environment(getArgs)
 
-import Language.GCL.InitChecking(initCheck)
+import Language.GCL.Eval(eval)
 import Language.GCL.Parser(parse)
-import Language.GCL.PrettyPrint(pPrint)
 import Language.GCL.TypeChecking(typeCheck)
-import Language.GCL.Verification(runWLP)
+import Language.GCL.Verification(verify)
 
 main :: IO ()
 main = do
-  [path] <- getArgs
+  (cmd : path : args) <- getArgs
   code <- T.readFile path
+
+  let
+    runCmd = case cmd of
+      "run" -> print . eval args
+      "wlp" -> print . verify
+      _ -> error $ "Unknown command " <> show cmd
 
   parse path code
     >>= typeCheck
-    >>= initCheck
-    <&> runWLP
-    & either T.putStrLn pPrint
+    <&> runCmd
+    & either T.putStrLn id
