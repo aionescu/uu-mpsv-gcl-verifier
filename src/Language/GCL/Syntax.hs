@@ -1,5 +1,4 @@
 module Language.GCL.Syntax where
-
 import Data.Fix(Fix(..))
 import Data.Functor.Classes(Show1(..), showsPrec1)
 import Data.List(intercalate)
@@ -50,16 +49,20 @@ data Decl = Decl
     declType :: Type
   }
 
-data Stmt
+data StmtF e
   = Skip
   | Assume Expr
   | Assert Expr
   | Assign Id Expr
   | AssignIndex Id Expr Expr
-  | If Expr Stmt Stmt
-  | While Expr Stmt
-  | Seq Stmt Stmt
-  | Let [Decl] Stmt
+  | If Expr e e
+  | While Expr e
+  | Seq e e
+  | Let [Decl] e
+  deriving (Functor, Foldable, Traversable)
+
+
+type Stmt = Fix StmtF
 
 data Program = Program
   { programName :: Id,
@@ -136,22 +139,26 @@ instance Show Decl where
 decls :: [Decl] -> String
 decls ds = intercalate ", " $ show <$> ds
 
-block :: Stmt -> String
-block Skip = " { }"
-block s = " {\n" <> unlines (("  " <>) <$> lines (show s)) <> "}"
+block :: ShowS -> ShowS
+block s = showText " {\n" . s . showText "}"
 
-instance Show Stmt where
-  show = \case
-    Skip -> "skip;"
-    Assume e -> "assume " <> show e <> ";"
-    Assert e -> "assert " <> show e <> ";"
-    Assign v e -> unpack v <> " = " <> show e <> ";"
-    AssignIndex v i e -> unpack v <> "[" <> show i <> "] = " <> show e <> ";"
-    If e s Skip -> "if " <> show e <> block s
-    If e s s2 -> "if " <> show e <> block s <> " else" <> block s2
-    While e s -> "while " <> show e <> block s
-    Seq s s2 -> show s <> "\n" <> show s2
-    Let ds s -> "let " <> decls ds <> block s
+instance Show1 StmtF where
+  liftShowsPrec :: (Int -> a -> ShowS) -> ([a] -> ShowS) -> Int -> StmtF a -> ShowS
+  liftShowsPrec showS _ _ = \case
+    Skip -> showText "skip;"
+    Assume e -> showText "assume " . shows e . showText ";"
+    Assert e -> showText "assert " . shows e . showText ";"
+    Assign v e -> showText v . showText " = " . shows e . showText ";"
+    AssignIndex v i e -> showText v . showText "[" . shows i . showText "] = " . shows e . showText ";"
+    If e s s2 -> showText "if " . shows e . (block . showS 0) s . showText " else" . (block . showS 0) s2
+    While e s -> showText "while " . shows e . (block . showS 0) s
+    Seq s s2 -> showS 0 s . showText "\n" . showS 0 s2 
+    Let ds s -> showText "let " . (showString . decls) ds . (block . showS 0) s
+
+instance {-# OVERLAPPING #-} Show Stmt where
+  showsPrec :: Int -> Stmt -> ShowS
+  showsPrec p = showsPrec1 p . unFix
+
 
 instance Show Program where
-  show (Program n i o b) = unpack n <> "(" <> decls i <> ") -> " <> show o <> block b
+  show (Program n i o b) = unpack n <> "(" <> decls i <> ") -> " <> show o <>  "{\n" <> show b <>  "}"

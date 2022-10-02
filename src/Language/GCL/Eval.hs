@@ -14,6 +14,7 @@ import Text.Read(Read(..), ReadPrec)
 
 import Language.GCL.Syntax
 import Language.GCL.Utils((...))
+import Data.Fix (Fix(..))
 
 data Val
   = I { unI :: Int }
@@ -85,7 +86,7 @@ evalExpr = cata \case
   Forall v e -> shadow (S.singleton v) $ B . all unB <$> traverse (instantiate v e) [-100 .. 100]
   Exists v e -> shadow (S.singleton v) $ B . any unB <$> traverse (instantiate v e) [-100 .. 100]
 
-evalStmt :: Stmt -> Eval ()
+evalStmt :: StmtF Stmt -> Eval ()
 evalStmt Skip = pure ()
 evalStmt (Assume e) = evalExpr e >>= \case
   B False -> error "assume failed"
@@ -100,13 +101,13 @@ evalStmt (AssignIndex v i e) = do
   e <- evalExpr e
   modify (M.insert v $ A $ a V.// [(i, e)])
 evalStmt (If g t e) = evalExpr g >>= \case
-  B True -> evalStmt t
-  _ -> evalStmt e
+  B True -> evalStmt (unFix t)
+  _ -> evalStmt (unFix e)
 evalStmt w@(While g s) = evalExpr g >>= \case
-  B True -> evalStmt s *> evalStmt w
+  B True -> evalStmt (unFix s) *> evalStmt w
   _ -> pure ()
-evalStmt (Seq a b) = evalStmt a *> evalStmt b
-evalStmt (Let ds s) = shadow (S.fromList $ declName <$> ds) $ evalStmt s
+evalStmt (Seq a b) = evalStmt (unFix a) *> evalStmt (unFix b)
+evalStmt (Let ds s) = shadow (S.fromList $ declName <$> ds) $ evalStmt (unFix s)
 
 getInputs :: [Decl] -> [String] -> Env
 getInputs ds vs
@@ -115,4 +116,4 @@ getInputs ds vs
 
 eval :: [String] -> Program -> Val
 eval args (Program _ i d@(Decl v _) b) =
-  evalState (evalStmt b *> lookupVar v) $ getInputs (i <> [d]) args
+  evalState (evalStmt (unFix b) *> lookupVar v) $ getInputs (i <> [d]) args
