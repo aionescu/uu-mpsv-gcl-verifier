@@ -38,6 +38,7 @@ data ExprF e
   | Subscript Id e
   | Forall Id e
   | Exists Id e
+  | Conditional e e e
   deriving Functor
 
 type Expr = Fix ExprF
@@ -128,6 +129,7 @@ instance Show1 ExprF where
     Subscript v e -> showText v . showChar '[' . showE 0 e . showChar ']'
     Forall v e -> showParen (p > 1) $ showString "forall " . showText v . showString ". " . showE 0 e
     Exists v e -> showParen (p > 1) $ showString "exists " . showText v . showString ". " . showE 0 e
+    Conditional c e1 e2 -> showText "(" . showE 0 c . showText " -> " . showE 0 e1 . showText "|" . showE 0 e2 . showText ")"
 
 instance {-# OVERLAPPING #-} Show Expr where
   showsPrec :: Int -> Expr -> ShowS

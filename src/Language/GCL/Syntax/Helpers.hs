@@ -29,6 +29,10 @@ pattern F = B False
 (¬) :: Expr -> Expr
 (¬) = Fix . Negate
 
+ifEqExpr :: Expr -> Expr -> Expr -> Expr -> Expr
+ifEqExpr a b e1 e2 = Fix $ Conditional (Fix $ BinOp Eq a b) e1 e2
+
+
 assertSt :: Expr -> Stmt
 assertSt = Fix . Assert
 
