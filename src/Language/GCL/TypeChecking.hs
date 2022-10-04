@@ -50,8 +50,10 @@ typeInferExpr = cata \case
   Subscript v e -> check Int e *> lookupVar v >>= unArray
   Forall v e -> with [Decl v Int] $ check Bool e $> Bool
   Exists v e -> with [Decl v Int] $ check Bool e $> Bool
+  _ -> throwError "It is not supported"
 
 typeCheckExpr :: Type -> Expr -> TC ()
+typeCheckExpr _ (Fix Conditional {}) = throwError $ "If is not supported in expressions"
 typeCheckExpr t e = void $ check t $ typeInferExpr e
 
 with :: [Decl] -> TC a -> TC a

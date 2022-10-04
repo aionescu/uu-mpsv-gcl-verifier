@@ -1,0 +1,8 @@
+minIndex(a: [Int], i: Int) -> r: Int {
+  assume #a == 10 && i + 1 == 3;
+  -- (3 == i ->  8 else (3 == i + 1 -> 5 | a[3])) = 5
+  a[i + 1] = 5;
+  -- (3 == i ->  8 else a[3]) = 5
+  a[i] = 8;
+  assert a[3] == 5;
+}
