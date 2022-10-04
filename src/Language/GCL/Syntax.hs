@@ -154,7 +154,7 @@ instance Show1 StmtF where
     AssignIndex v i e -> showText v . showText "[" . shows i . showText "] = " . shows e . showText ";"
     If e s s2 -> showText "if " . shows e . (block . showS 0) s . showText " else" . (block . showS 0) s2
     While e s -> showText "while " . shows e . (block . showS 0) s
-    Seq s s2 -> showS 0 s . showText "\n" . showS 0 s2 
+    Seq s s2 -> showS 0 s . showText "\n" . showS 0 s2
     Let ds s -> showText "let " . (showString . decls) ds . (block . showS 0) s
 
 instance {-# OVERLAPPING #-} Show Stmt where

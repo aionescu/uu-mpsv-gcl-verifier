@@ -50,10 +50,9 @@ typeInferExpr = cata \case
   Subscript v e -> check Int e *> lookupVar v >>= unArray
   Forall v e -> with [Decl v Int] $ check Bool e $> Bool
   Exists v e -> with [Decl v Int] $ check Bool e $> Bool
-  _ -> throwError "It is not supported"
+  Conditional g t e -> check Bool g *> t >>= (`check` e)
 
 typeCheckExpr :: Type -> Expr -> TC ()
-typeCheckExpr _ (Fix Conditional {}) = throwError $ "If is not supported in expressions"
 typeCheckExpr t e = void $ check t $ typeInferExpr e
 
 with :: [Decl] -> TC a -> TC a
@@ -63,19 +62,19 @@ with ds m
   where
     env = M.fromList $ ds <&> \(Decl v t) -> (v, t)
 
-typeCheckStmt :: StmtF Stmt -> TC ()
-typeCheckStmt Skip = pure ()
-typeCheckStmt (Assume e) = void $ typeCheckExpr Bool e
-typeCheckStmt (Assert e) = void $ typeCheckExpr Bool e
-typeCheckStmt (Assign v e) = lookupVar v >>= (`typeCheckExpr` e)
-typeCheckStmt (AssignIndex v i e) =
-  typeCheckExpr Int i *> lookupVar v >>= unArray >>= (`typeCheckExpr` e)
-typeCheckStmt (If g t e) = typeCheckExpr Bool g *> typeCheckStmt (unFix t) *> typeCheckStmt (unFix e)
-typeCheckStmt (While g s) = typeCheckExpr Bool g *> typeCheckStmt (unFix s)
-typeCheckStmt (Seq a b) = typeCheckStmt (unFix a) *> typeCheckStmt (unFix b)
-typeCheckStmt (Let ds s) = with ds $ typeCheckStmt (unFix s)
+typeCheckStmt :: Stmt -> TC ()
+typeCheckStmt = cata \case
+  Skip -> pure ()
+  Assume e -> void $ typeCheckExpr Bool e
+  Assert e -> void $ typeCheckExpr Bool e
+  Assign v e -> lookupVar v >>= (`typeCheckExpr` e)
+  AssignIndex v i e -> typeCheckExpr Int i *> lookupVar v >>= unArray >>= (`typeCheckExpr` e)
+  If g t e -> typeCheckExpr Bool g *> t *> e
+  While g s -> typeCheckExpr Bool g *> s
+  Seq a b -> a *> b
+  Let ds s -> with ds s
 
 typeCheck :: Program -> Either Text Program
 typeCheck p@(Program _ i o b) =
   first ("Type error: " <>)
-  $ runReaderT (typeCheckStmt (Let (o : i) b) $> p) M.empty
+  $ runReaderT (typeCheckStmt (Fix $ Let (o : i) b) $> p) M.empty
