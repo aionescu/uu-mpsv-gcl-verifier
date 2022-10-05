@@ -39,7 +39,7 @@ data ExprF e
   | Forall Id e
   | Exists Id e
   | Conditional e e e
-  deriving Functor
+  deriving (Functor, Foldable, Traversable)
 
 type Expr = Fix ExprF
 

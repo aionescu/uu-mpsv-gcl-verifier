@@ -17,4 +17,4 @@ main = do
   parse path code
     >>= typeCheck
     <&> verify
-    & either T.putStrLn print
+    & either T.putStrLn (>>= print)
