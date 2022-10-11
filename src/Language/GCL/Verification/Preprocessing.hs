@@ -4,7 +4,7 @@ import Language.GCL.Syntax
 import Control.Monad.State (State, get, put, evalState)
 import Data.Functor.Foldable(cata, Recursive (para))
 import Data.Fix(Fix(..))
-import Language.GCL.Syntax.Helpers ( ifSt, skipSt, seqSt, (¬), assertSt, assignSt, assumeSt, assignIndexSt )
+import Language.GCL.Syntax.Helpers ( ifSt, skipSt, seqSt, (¬), assertSt, assignSt, assumeSt, assignIndexSt, letSt )
 import Data.Functor.Foldable.Monadic (cataM)
 import Language.GCL.Utils (showT)
 
@@ -33,11 +33,12 @@ removeShadowing :: Stmt -> State Counter Stmt
 removeShadowing = cataM go
   where go :: StmtF Stmt -> State Counter Stmt
         go (Let dcs s) = do
-            ns <- removeShadowing s
+            n' <- removeShadowing s
             let names = map (\Decl{..} -> declName) dcs
             tr <- mapM uniqueId names
-            let nS = foldl (flip $ uncurry substSt) ns $ zip names tr
-            return nS
+            let n'' = foldl (flip $ uncurry substSt) n' $ zip names tr
+            let dcs' = zipWith (\Decl{..} n' -> Decl{declName=n', ..}) dcs tr
+            return $ letSt dcs' n''
         go st = return $ Fix st
 
 uniqueId :: Id -> State Counter Id

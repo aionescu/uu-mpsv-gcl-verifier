@@ -26,6 +26,7 @@ wlp (Assert e) q = e ∧ q
 wlp (Assume e) q = e  ⟹ q
 wlp (If g s₁ s₂) q = (g ⟹ wlp (unFix s₁) q) ∧ ((¬)g ⟹ wlp (unFix s₂) q)
 wlp (AssignIndex ad i as) q = substSubscript ad i as q
+wlp (Let _ s) q = wlp (unFix s) q
 wlp s _ = error $ "WLP not yet implemented for: " <> show (Fix s)
 
 runWLP :: Program -> Pred
