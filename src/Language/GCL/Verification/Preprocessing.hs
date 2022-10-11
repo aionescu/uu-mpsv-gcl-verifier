@@ -4,7 +4,7 @@ import Language.GCL.Syntax
 import Control.Monad.State (State, get, put, evalState)
 import Data.Functor.Foldable(cata, Recursive (para))
 import Data.Fix(Fix(..))
-import Language.GCL.Syntax.Helpers ( ifSt, skipSt, seqSt, (¬), assertSt, assignSt, assumeSt, assignIndexSt, letSt )
+import Language.GCL.Syntax.Helpers ( ifSt, skipSt, seqSt, (¬), assertSt, assignSt, assumeSt, assignIndexSt, letSt, whileSt )
 import Data.Functor.Foldable.Monadic (cataM)
 import Language.GCL.Utils (showT)
 
@@ -30,16 +30,15 @@ runRemoveShadowing Program{..} = Program{programBody=evalState (removeShadowing 
 
 
 removeShadowing :: Stmt -> State Counter Stmt
-removeShadowing = cataM go
-  where go :: StmtF Stmt -> State Counter Stmt
-        go (Let dcs s) = do
-            n' <- removeShadowing s
-            let names = map (\Decl{..} -> declName) dcs
-            tr <- mapM uniqueId names
-            let n'' = foldl (flip $ uncurry substSt) n' $ zip names tr
-            let dcs' = zipWith (\Decl{..} n' -> Decl{declName=n', ..}) dcs tr
-            return $ letSt dcs' n''
-        go st = return $ Fix st
+removeShadowing = cataM \case
+  Let dcs s -> do
+    n' <- removeShadowing s
+    let names = map (\Decl{..} -> declName) dcs
+    tr <- mapM uniqueId names
+    let n'' = foldl (flip $ uncurry substSt) n' $ zip names tr
+    let dcs' = zipWith (\Decl{..} n' -> Decl{declName=n', ..}) dcs tr
+    return $ letSt dcs' n''
+  st -> return $ Fix st
 
 uniqueId :: Id -> State Counter Id
 uniqueId name = do
@@ -54,6 +53,8 @@ substSt id id' = cata \case
         Assert e -> assertSt $ subst id id' e
         Assume e -> assumeSt $ subst id id' e
         AssignIndex i e1 e2 | i == id -> assignIndexSt id' (subst id id' e1) (subst id id' e2)
+        If g t e -> ifSt (subst id id' g) t e
+        While g s -> whileSt (subst id id' g) s
         p -> Fix p
 
 subst :: Id -> Id -> Pred -> Pred
