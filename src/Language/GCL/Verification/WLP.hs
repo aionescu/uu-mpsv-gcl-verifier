@@ -1,7 +1,6 @@
-module Language.GCL.Verification.Wlp(runWlp) where
+module Language.GCL.Verification.WLP(runWLP) where
 
 import Language.GCL.Syntax
-import Data.Functor.Foldable(para)
 import Language.GCL.Syntax.Helpers (pattern T, (∧), (⟹), (¬), ifEqExpr )
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable
@@ -15,7 +14,7 @@ subst i e = para \case
   p -> Fix $ snd <$> p
 
 substSubscript :: Id -> Expr -> Expr -> Pred -> Pred
-substSubscript id c e' = cata \case 
+substSubscript id c e' = cata \case
   Subscript i e | i == id -> ifEqExpr e c e' $ Fix (Subscript i e)
   z -> Fix z
 
@@ -29,5 +28,5 @@ wlp (If g s₁ s₂) q = (g ⟹ wlp (unFix s₁) q) ∧ ((¬)g ⟹ wlp (unFix s�
 wlp (AssignIndex ad i as) q = substSubscript ad i as q
 wlp s _ = error $ "WLP not yet implemented for: " <> show (Fix s)
 
-runWlp :: Program -> Pred
-runWlp Program{..} = wlp (unFix programBody) T
+runWLP :: Program -> Pred
+runWLP Program{..} = wlp (unFix programBody) T

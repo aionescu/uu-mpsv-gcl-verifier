@@ -19,7 +19,6 @@ executable gcl
   main-is: Main.hs
 
   other-modules:
-    Language.GCL.Eval
     Language.GCL.Parser
     Language.GCL.Syntax
     Language.GCL.Syntax.Helpers
@@ -28,7 +27,7 @@ executable gcl
     Language.GCL.Verification
     Language.GCL.Verification.Preprocessing
     Language.GCL.Verification.Simplification
-    Language.GCL.Verification.Wlp
+    Language.GCL.Verification.WLP
 
   build-depends:
     base >=4.15 && <5
@@ -41,6 +40,7 @@ executable gcl
     , monadic-recursion-schemes ^>= 0.1.13.1
     , text ^>= 2
     , vector ^>= 0.13
+    , z3 ^>= 408.2
 
   ghc-options:
     -threaded
