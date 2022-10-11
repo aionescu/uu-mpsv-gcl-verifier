@@ -1,18 +1,8 @@
--- This returns the minimum of two integers. Supposedly valid.
-assign(x: Int, y: Int) -> z: Int {
-  let x: Int {
-    x = 0;
-  }
-  assert y < 2;
-}
-
--- This returns the minimum of two integers. Supposedly valid.
-assign(x: Int) -> z: Int {
-
+test(x: Int) -> z: Int {
   let y: Int {
     assume y > 0;
     x = y;
   }
 
-  assert true;
+  assert x > 0;
 }
