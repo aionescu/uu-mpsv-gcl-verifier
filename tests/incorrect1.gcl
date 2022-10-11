@@ -1,0 +1,5 @@
+-- This program checks that shadowing works as intended.
+
+shadow(x: Int) -> y: Int {
+  assert x == 7;
+}
