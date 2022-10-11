@@ -37,7 +37,7 @@ z3Vars = M.traverseWithKey go
     go i Bool = mkFreshBoolVar $ T.unpack i
     go _ (Array ty) = case ty of
       Int -> mkInteger 0
-      Bool -> mkInteger 0
+      Bool -> mkBool False
       _ -> error "z3Vars: Nested arrays are not supported"
 
 z3Expr :: Map Id AST -> Expr -> Z3 AST
@@ -61,14 +61,13 @@ z3Expr vars = cataM \case
     Gt -> mkGt a b
     Gte -> mkGe a b
   Negate a -> mkNot a
-  -- TODO(maksymiliandemitraszek): Does GCL support bools in forall?
   Subscript a _ -> return $ vars M.! a
   Forall i e -> do 
-    symb <- (mkStringSymbol.T.unpack) i
+    symb <- (mkStringSymbol . T.unpack) i
     sort <- mkIntSort
     mkForall [] [symb] [sort] e
   Exists i e -> do 
-    symb <- (mkStringSymbol.T.unpack) i
+    symb <- (mkStringSymbol . T.unpack) i
     sort <- mkIntSort
     mkExists [] [symb] [sort] e
   Conditional g t e -> mkIte g t e
