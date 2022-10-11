@@ -13,6 +13,13 @@ import Data.Functor.Foldable (cata)
 import Data.Functor.Foldable.Monadic (cataM)
 import Data.Text (Text)
 
+collectVarsExpr :: Expr -> Map Id Type
+collectVarsExpr = cata \case
+  Exists i e -> M.fromList [(i, Int)] <> e
+  Forall i e -> M.fromList [(i, Int)] <> e
+  _ -> M.empty
+
+
 collectVars :: Program -> Map Id Type
 collectVars Program{..} = go $ Fix $ Let (programOutput : programInputs) programBody
   where
@@ -23,11 +30,16 @@ collectVars Program{..} = go $ Fix $ Let (programOutput : programInputs) program
 
     go :: Stmt -> Map Id Type
     go = cata \case
-      If _ t e -> t <> e
-      While _ s -> s
+      If c t e -> t <> e <> collectVarsExpr c
+      While c s -> s <> collectVarsExpr c 
       Seq a b -> a <> b
       Let ds s -> decls ds <> s
+      Assume e -> collectVarsExpr e
+      Assert e -> collectVarsExpr e
+      Assign _ e -> collectVarsExpr e
+      AssignIndex _ e1 e2 -> collectVarsExpr e1 <> collectVarsExpr e2
       _ -> M.empty
+
 
 z3Vars :: Map Id Type -> Z3 (Map Id AST)
 z3Vars = M.traverseWithKey go
@@ -39,6 +51,7 @@ z3Vars = M.traverseWithKey go
       Int -> mkInteger 0
       Bool -> mkBool False
       _ -> error "z3Vars: Nested arrays are not supported"
+
 
 z3Expr :: Map Id AST -> Expr -> Z3 AST
 z3Expr vars = cataM \case
