@@ -13,21 +13,22 @@ subst i e = para \case
   Exists v (p, _) | i == v -> Fix $ Exists v p
   p -> Fix $ snd <$> p
 
-substSubscript :: Id -> Expr -> Expr -> Pred -> Pred
-substSubscript id c e' = cata \case
-  Subscript i e | i == id -> ifEqExpr e c e' $ Fix (Subscript i e)
+repBy :: Id -> Expr -> Expr -> Pred -> Pred
+repBy a i e = cata \case
+  z@(Subscript a' i') | a == a' -> ifEqExpr i i' e $ Fix z
   z -> Fix z
 
-wlp :: StmtF Stmt -> Pred -> Pred
-wlp Skip q = q
-wlp (Assign i e) q = subst i e q
-wlp (Seq s₁ s₂) q = wlp (unFix s₁) $ wlp (unFix s₂) q
-wlp (Assert e) q = e ∧ q
-wlp (Assume e) q = e  ⟹ q
-wlp (If g s₁ s₂) q = (g ⟹ wlp (unFix s₁) q) ∧ ((¬)g ⟹ wlp (unFix s₂) q)
-wlp (AssignIndex ad i as) q = substSubscript ad i as q
-wlp (Let _ s) q = wlp (unFix s) q
-wlp s _ = error $ "WLP not yet implemented for: " <> show (Fix s)
+wlp :: Stmt -> Pred -> Pred
+wlp = cata \case
+  Skip -> id
+  Assign i e -> subst i e
+  Seq s₁ s₂ -> s₁ . s₂
+  Assert e -> (e ∧)
+  Assume e -> (e ⟹)
+  If g s₁ s₂ -> \q -> (g ⟹ s₁ q) ∧ ((¬)g ⟹ s₂ q)
+  AssignIndex a i e -> repBy a i e
+  Let _ s -> s
+  While{} -> error "wlp: While not supported"
 
 runWLP :: Program -> Pred
-runWLP Program{..} = wlp (unFix programBody) T
+runWLP Program{..} = wlp programBody T
