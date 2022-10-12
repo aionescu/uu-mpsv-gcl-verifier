@@ -34,6 +34,7 @@ simplify = cata go
 
       Negate (B b) -> B $ not b
       Negate (I i) -> I -i
+      Negate (Fix (Negate a)) -> a
 
       BinOp o (I a) (I b)
         | Add <- o -> I $ a + b
@@ -57,5 +58,7 @@ simplify = cata go
 
       BinOp o a@I{} b
         | isCommutative o -> go $ BinOp o b a
+
+      BinOp Sub (Fix (BinOp Sub e (I a))) (I b) -> go $ BinOp Sub e $ I $ a + b
 
       p -> Fix p

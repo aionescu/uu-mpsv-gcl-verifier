@@ -14,7 +14,7 @@ preprocess :: Program -> Program
 preprocess = unrollLoops . runRemoveShadowing
 
 unroll :: Int -> Expr -> Stmt -> Stmt
-unroll 0 g _ = assertSt . (¬) $ g
+unroll 0 g _ = assumeSt $ (¬)g
 unroll n g s = ifSt g (seqSt s $ unroll (n - 1) g s) skipSt
 
 

@@ -7,11 +7,14 @@ import Data.Functor.Foldable(cata)
 import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
-import Z3.Monad hiding (local)
+import Z3.Monad hiding (local, simplify)
 
 import Language.GCL.Syntax
 import Language.GCL.Verification.Preprocessing(preprocess)
 import Language.GCL.Verification.WLP(runWLP)
+import Language.GCL.Verification.Simplification (simplify)
+import Data.Text (Text)
+import Debug.Trace (traceShowId)
 
 type Env = Map Id AST
 type Z = ReaderT Env Z3
@@ -84,9 +87,9 @@ z3Expr = cata \case
 checkPred :: Map Id Type -> Pred -> Z3 Result
 checkPred v p = (z3Vars v >>= runReaderT (z3Expr p) >>= mkNot >>= assert) *> check
 
-verify :: Program -> IO ()
+verify :: Program -> IO Text
 verify p = do
-  sat <- evalZ3 $ checkPred <$> collectVars <*> runWLP $ preprocess p
-  putStrLn case sat of
+  sat <- evalZ3 $ checkPred <$> collectVars <*> traceShowId . simplify . runWLP $ preprocess p
+  pure case sat of
     Unsat -> "✔️"
     _ -> "❌"

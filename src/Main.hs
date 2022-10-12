@@ -17,4 +17,5 @@ main = do
   parse path code
     >>= typeCheck
     <&> verify
-    & either T.putStrLn id
+    & either T.putStrLn (>>= T.putStrLn)
+
