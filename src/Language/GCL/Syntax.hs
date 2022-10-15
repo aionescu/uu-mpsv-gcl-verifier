@@ -62,7 +62,6 @@ data StmtF e
   | Let [Decl] e
   deriving (Functor, Foldable, Traversable)
 
-
 type Stmt = Fix StmtF
 
 data Program = Program

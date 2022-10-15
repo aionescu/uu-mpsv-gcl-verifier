@@ -17,17 +17,14 @@ unroll :: Int -> Expr -> Stmt -> Stmt
 unroll 0 g _ = assumeSt $ (¬)g
 unroll n g s = ifSt g (seqSt s $ unroll (n - 1) g s) skipSt
 
-
 unrollLoops :: Program -> Program
 unrollLoops Program{..} = Program{programBody=cata go programBody, ..}
   where go :: StmtF Stmt -> Stmt
         go (While g s) = unroll 10 g s
         go p = Fix p
 
-
 runRemoveShadowing :: Program -> Program
 runRemoveShadowing Program{..} = Program{programBody=evalState (removeShadowing programBody) 0, ..}
-
 
 removeShadowing :: Stmt -> State Counter Stmt
 removeShadowing = cataM \case

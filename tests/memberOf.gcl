@@ -1,3 +1,4 @@
+-- Correct
 memberOf(x: Int, a: [Int]) -> found: Bool {
   assume #a >= 5 && #a >=0 && exists k. 0 <= k && k < #a && a[k] == x;
 

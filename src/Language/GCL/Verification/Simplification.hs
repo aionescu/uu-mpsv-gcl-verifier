@@ -6,7 +6,6 @@ import Data.Functor.Foldable(cata)
 import Language.GCL.Syntax ( BinOp(..), ExprF(BinOp, Negate, Var), Pred )
 import Language.GCL.Syntax.Helpers ( pattern F, pattern T, pattern B, pattern I )
 
-
 isCommutative :: BinOp -> Bool
 isCommutative o = o `elem` [Add, Mul]
 
