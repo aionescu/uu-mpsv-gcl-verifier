@@ -1,6 +1,6 @@
 module Language.GCL.Syntax where
 import Data.Fix(Fix(..))
-import Data.Functor.Classes(Show1(..), showsPrec1)
+import Data.Functor.Classes(Show1(..), showsPrec1, Eq1 (liftEq))
 import Data.List(intercalate)
 import Data.Text(Text, unpack)
 
@@ -164,3 +164,17 @@ instance {-# OVERLAPPING #-} Show Stmt where
 
 instance Show Program where
   show (Program n i o b) = unpack n <> "(" <> decls i <> ") -> " <> show o <>  "{\n" <> show b <>  "}"
+
+instance Eq1 ExprF where
+  liftEq :: (a -> b -> Bool) -> ExprF a -> ExprF b -> Bool
+  liftEq _ (IntLit a) (IntLit b) = a == b
+  liftEq _ (BoolLit a) (BoolLit b) = a == b
+  liftEq _ (Var a) (Var b) = a == b
+  liftEq _ (Length a) (Length b) = a == b
+  liftEq f (BinOp o1 a1 b1) (BinOp o2 a2 b2) = o1 == o2 && f a1 a2 && f b1 b2 
+  liftEq f (Negate a) (Negate b) = f a b
+  liftEq f (Subscript i1 a) (Subscript i2 b) = f a b && i1 == i2
+  liftEq f (Forall i1 a) (Forall i2 b) = f a b && i1 == i2
+  liftEq f (Exists i1 a) (Exists i2 b) = f a b && i1 == i2
+  liftEq f (Conditional a1 a2 a3) (Conditional b1 b2 b3) = f a1 b1 && f a2 b2 && f a3 b3 
+  liftEq _ _ _ = False
