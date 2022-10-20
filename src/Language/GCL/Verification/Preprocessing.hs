@@ -10,17 +10,17 @@ import Language.GCL.Utils (showT)
 
 type Counter = Int
 
-preprocess :: Program -> Program
-preprocess = unrollLoops . runRemoveShadowing
+preprocess :: Int -> Program -> Program
+preprocess k = unrollLoops k . runRemoveShadowing
 
 unroll :: Int -> Expr -> Stmt -> Stmt
 unroll 0 g _ = Assume' $ Not' g
 unroll n g s = If' g (Seq' s $ unroll (n - 1) g s) Skip'
 
-unrollLoops :: Program -> Program
-unrollLoops Program{..} = Program{programBody=cata go programBody, ..}
+unrollLoops :: Int -> Program -> Program
+unrollLoops k Program{..} = Program{programBody=cata go programBody, ..}
   where go :: StmtF Stmt -> Stmt
-        go (While g s) = unroll 10 g s
+        go (While g s) = unroll k g s
         go p = Fix p
 
 runRemoveShadowing :: Program -> Program

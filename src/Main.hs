@@ -1,21 +1,24 @@
 module Main(main) where
 
+import Data.Bool(bool)
 import Data.Function((&))
 import Data.Functor((<&>))
 import Data.Text.IO qualified as T
-import System.Environment(getArgs)
+import System.Exit(ExitCode(..), exitWith)
 
+import Language.GCL.Opts
 import Language.GCL.Parser(parse)
 import Language.GCL.TypeChecking(typeCheck)
 import Language.GCL.Verification(verify)
 
 main :: IO ()
 main = do
-  [path] <- getArgs
+  opts@Opts{..} <- getOpts
   code <- T.readFile path
 
-  parse path code
+  code
+    & parse opts
     >>= typeCheck
-    <&> verify
-    & either T.putStrLn (>>= T.putStrLn)
-
+    <&> verify opts
+    & either ((False <$) . T.putStrLn) id
+    >>= exitWith . bool (ExitFailure 1) ExitSuccess

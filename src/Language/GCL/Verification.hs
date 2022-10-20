@@ -1,18 +1,22 @@
 module Language.GCL.Verification(verify) where
 
-import Control.Monad(join, unless)
+import Control.Monad(join, when, zipWithM_)
 import Control.Monad.Reader(ReaderT(..), asks, local)
+import Data.Bool(bool)
 import Data.Fix(Fix(..))
+import Data.Functor((<&>))
 import Data.Functor.Foldable(cata)
 import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
-import Z3.Monad hiding (local, simplify)
+import Data.Text.IO qualified as T
+import Z3.Monad hiding (Opts, local, simplify)
 
+import Language.GCL.Opts
 import Language.GCL.Syntax
+import Language.GCL.Utils
 import Language.GCL.Verification.Preprocessing(preprocess)
-import Language.GCL.Verification.WLP(runWLP)
-import Data.Text (Text)
+import Language.GCL.Verification.WLP(wlp)
 
 type Env = Map Id AST
 type Z = ReaderT Env Z3
@@ -83,24 +87,24 @@ z3Expr = cata \case
     mkExists [] [sym] [sort] =<< local (M.insert i var) e
   Conditional g t e -> join $ mkIte <$> g <*> t <*> e
 
-checkPred :: Map Id Type -> Pred -> Z3 Result
-checkPred v p = (z3Vars v >>= runReaderT (z3Expr p) >>= mkNot >>= assert) *> check
+checkValid :: Map Id Type -> Pred -> Z3 Bool
+checkValid v p = (z3Vars v >>= runReaderT (z3Expr p) >>= mkNot >>= assert) *> check <&> (== Unsat)
 
-verifyPath :: Map Id Type -> Pred -> IO Result
-verifyPath m p = evalZ3 $ checkPred m p
+verify :: Opts -> Program -> IO Bool
+verify Opts{..} program = do
+  let
+    p = preprocess unrollDepth program
+    vars = collectVars p
+    preds = wlp noSimplify p
+    emoji = bool "❌" "✔️ "
 
-verify :: Program -> IO Text
-verify p = do
-  let preprocessed = preprocess p
-  let preds = runWLP preprocessed
-  let vars = collectVars preprocessed
-  r <- mapM (verifyPath vars) preds
-  let isValid = \case
-        Unsat -> True
-        _ -> False
-  print $ "Verfied " ++ show (length r) ++ " paths"
+  results <- traverse (evalZ3 . checkValid vars) preds
 
-  let failed = (map fst . filter (not . isValid . snd) . zip preds) r
-  unless (null failed) $ print ("Invalid paths:" :: String)
-  mapM_ print failed
-  return (if all isValid r then "✔️" else "❌")
+  when showStats do
+    zipWithM_ (\r p -> T.putStrLn $ emoji r <> " " <> showT p) results preds
+
+    putStrLn
+      $ "Verfied " <> show (length preds) <> " paths, out of which "
+      <> show (length $ filter not results) <> " were invalid"
+
+  pure $ and results

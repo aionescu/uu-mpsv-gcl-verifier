@@ -12,6 +12,7 @@ import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer qualified as L
 
+import Language.GCL.Opts
 import Language.GCL.Syntax hiding (block, decls)
 import Language.GCL.Utils((...))
 
@@ -140,7 +141,7 @@ program =
   <*> (symbol "->" *> decl)
   <*> block
 
-parse :: FilePath -> Text -> Either Text Program
-parse path =
+parse :: Opts -> Text -> Either Text Program
+parse Opts{..} =
   first (("Parser error:\n" <>) . T.pack . errorBundlePretty)
   . runParser (optional sc *> program <* eof) path

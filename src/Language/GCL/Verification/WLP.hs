@@ -1,11 +1,10 @@
-module Language.GCL.Verification.WLP(runWLP) where
+module Language.GCL.Verification.WLP(wlp) where
 
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable
 import Language.GCL.Verification.Simplification (simplify)
-import Data.Bool (bool)
 
 subst :: Id -> Expr -> Pred -> Pred
 subst i e = para \case
@@ -20,20 +19,21 @@ repBy a i e = cata \case
   z@(Subscript a' i') | a == a' -> IfEq' i i' e $ Fix z
   z -> Fix z
 
-reduce:: [Pred] -> [Pred]
-reduce = filter (/= T) . map simplify
+wlp :: Bool -> Program -> [Pred]
+wlp noSimplify Program{..} = prune $ go programBody [T]
+  where
+    prune
+      | noSimplify = id
+      | otherwise = filter (\case T -> False; _ -> True) . fmap simplify
 
-wlp :: Bool -> Stmt -> [Pred] -> [Pred]
-wlp smp = cata \case
-  Skip -> id
-  Assign i e -> map $ subst i e
-  Seq s1 s2 -> s1 . s2
-  Assert e -> map (e :&&)
-  Assume e -> map (e :=>)
-  If g s1 s2 -> \q -> bool id reduce smp $ map (g :=>) (s1 q) <> map (Not' g :=>) (s2 q)
-  AssignIndex a i e -> map $ repBy a i e
-  Let _ s -> s
-  While{} -> error "wlp: While not supported"
-
-runWLP :: Program -> [Pred]
-runWLP Program{..} = wlp True programBody [T]
+    go :: Stmt -> [Pred] -> [Pred]
+    go = cata \case
+      Skip -> id
+      Assign i e -> fmap $ subst i e
+      Seq s1 s2 -> s1 . s2
+      Assert e -> fmap (e :&&)
+      Assume e -> fmap (e :=>)
+      If g s1 s2 -> \q -> prune $ fmap (g :=>) (s1 q) <> fmap (Not' g :=>) (s2 q)
+      AssignIndex a i e -> fmap $ repBy a i e
+      Let _ s -> s
+      While{} -> error "wlp: Loops should have been eliminated by preprocessing"
