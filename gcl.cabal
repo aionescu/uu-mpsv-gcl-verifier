@@ -39,7 +39,6 @@ executable gcl
     , recursion-schemes ^>= 5.2.2.2
     , monadic-recursion-schemes ^>= 0.1.13.1
     , text ^>= 2
-    , vector ^>= 0.13
     , z3 ^>= 408.2
 
   ghc-options:

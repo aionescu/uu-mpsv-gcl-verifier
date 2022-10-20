@@ -14,7 +14,6 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 import Language.GCL.Syntax hiding (block, decls)
 import Language.GCL.Utils((...))
-import Language.GCL.Syntax.Helpers (skipSt, assumeSt, assertSt, assignIndexSt, assignSt, ifSt, whileSt, letSt, seqSt)
 
 type Parser = Parsec Void Text
 
@@ -102,19 +101,19 @@ expr = makeExprParser exprAtom operatorTable
 stmtSimple :: Parser Stmt
 stmtSimple =
   choice
-  [ skipSt <$ symbol "skip"
-  , assumeSt <$> (symbol "assume" *> expr)
-  , assertSt <$> (symbol "assert" *> expr)
-  , try $ assignIndexSt <$> ident <*> (btwn "[" "]" expr <* symbol "=") <*> expr
-  , assignSt <$> (ident <* symbol "=") <*> expr
+  [ Fix Skip <$ symbol "skip"
+  , Fix . Assume <$> (symbol "assume" *> expr)
+  , Fix . Assert <$> (symbol "assert" *> expr)
+  , try $ (Fix .) ... AssignIndex <$> ident <*> (btwn "[" "]" expr <* symbol "=") <*> expr
+  , Fix ... Assign <$> (ident <* symbol "=") <*> expr
   ] <* symbol ";"
 
 stmtCompound :: Parser Stmt
 stmtCompound =
   choice
-  [ ifSt <$> (symbol "if" *> expr) <*> block <*> ((symbol "else" *> block) <|> pure skipSt)
-  , whileSt <$> (symbol "while" *> expr) <*> block
-  , letSt <$> (symbol "let" *> decls) <*> block
+  [ (Fix .) ... If <$> (symbol "if" *> expr) <*> block <*> option (Fix Skip) (symbol "else" *> block)
+  , Fix ... While <$> (symbol "while" *> expr) <*> block
+  , Fix ... Let <$> (symbol "let" *> decls) <*> block
   , block
   ] <* optional (symbol ";")
 
@@ -124,8 +123,8 @@ stmt = stmtSimple <|> stmtCompound
 block :: Parser Stmt
 block = btwn "{" "}" $ seq <$> many stmt
   where
-    seq [] = skipSt
-    seq xs = foldr1 seqSt xs
+    seq [] = Fix Skip
+    seq xs = foldr1 (Fix ... Seq) xs
 
 decl :: Parser Decl
 decl = Decl <$> (ident <* symbol ":") <*> type'

@@ -3,8 +3,8 @@ module Language.GCL.Verification.Simplification(simplify) where
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable(cata)
 
-import Language.GCL.Syntax ( Op(..), ExprF(..), Pred )
-import Language.GCL.Syntax.Helpers ( pattern F, pattern T, pattern B, pattern I )
+import Language.GCL.Syntax
+import Language.GCL.Syntax.Helpers
 
 isCommutative :: Op -> Bool
 isCommutative o = o `elem` [Add, Mul]

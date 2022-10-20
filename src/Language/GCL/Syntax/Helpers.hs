@@ -3,7 +3,6 @@ module Language.GCL.Syntax.Helpers where
 import Data.Fix(Fix(..))
 
 import Language.GCL.Syntax
-import Language.GCL.Utils((...))
 
 pattern I :: Int -> Expr
 pattern I i = Fix (IntLit i)
@@ -17,44 +16,44 @@ pattern T = B True
 pattern F :: Expr
 pattern F = B False
 
-(∧) :: Expr -> Expr -> Expr
-(∧) = Fix ... Op And
+pattern (:&&) :: Expr -> Expr -> Expr
+pattern a :&& b = Fix (Op And a b)
 
-(∨) :: Expr -> Expr -> Expr
-(∨) = Fix ... Op Or
+pattern (:||) :: Expr -> Expr -> Expr
+pattern a :|| b = Fix (Op Or a b)
 
-(⟹) :: Expr -> Expr -> Expr
-(⟹) = Fix ... Op Implies
+pattern (:=>) :: Expr -> Expr -> Expr
+pattern a :=> b = Fix (Op Implies a b)
 
-(¬) :: Expr -> Expr
-(¬) = Fix . Not
+pattern Not' :: Expr -> Expr
+pattern Not' a = Fix (Not a)
 
-ifEqExpr :: Expr -> Expr -> Expr -> Expr -> Expr
-ifEqExpr a b e1 e2 = Fix $ Conditional (Fix $ Op Eq a b) e1 e2
+pattern IfEq' :: Expr -> Expr -> Expr -> Expr -> Expr
+pattern IfEq' a b e1 e2 = Fix (Conditional (Fix (Op Eq a b)) e1 e2)
 
-assertSt :: Expr -> Stmt
-assertSt = Fix . Assert
+pattern Assert' :: Expr -> Stmt
+pattern Assert' a = Fix (Assert a)
 
-assumeSt :: Expr -> Stmt
-assumeSt = Fix . Assume
+pattern Assume' :: Expr -> Stmt
+pattern Assume' a = Fix (Assume a)
 
-ifSt :: Expr -> Stmt -> Stmt -> Stmt
-ifSt e s1 s2= Fix $ If e s1 s2
+pattern If' :: Expr -> Stmt -> Stmt -> Stmt
+pattern If' e s1 s2= Fix (If e s1 s2)
 
-whileSt :: Expr -> Stmt -> Stmt
-whileSt e s = Fix $ While e s
+pattern While' :: Expr -> Stmt -> Stmt
+pattern While' e s = Fix (While e s)
 
-skipSt :: Stmt
-skipSt = Fix Skip
+pattern Skip' :: Stmt
+pattern Skip' = Fix Skip
 
-seqSt :: Stmt -> Stmt ->Stmt
-seqSt a b = Fix $ Seq a b
+pattern Seq' :: Stmt -> Stmt ->Stmt
+pattern Seq' a b = Fix (Seq a b)
 
-letSt :: [Decl] -> Stmt -> Stmt
-letSt dc st = Fix $ Let dc st
+pattern Let' :: [Decl] -> Stmt -> Stmt
+pattern Let' dc st = Fix (Let dc st)
 
-assignIndexSt :: Id -> Expr -> Expr -> Stmt
-assignIndexSt i e e2 = Fix $ AssignIndex i e e2
+pattern AssignIndex' :: Id -> Expr -> Expr -> Stmt
+pattern AssignIndex' i e e2 = Fix (AssignIndex i e e2)
 
-assignSt :: Id -> Expr -> Stmt
-assignSt i e = Fix $ Assign i e
+pattern Assign' :: Id -> Expr -> Stmt
+pattern Assign' i e = Fix (Assign i e)

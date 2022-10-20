@@ -1,10 +1,11 @@
 module Language.GCL.Verification.WLP(runWLP) where
 
 import Language.GCL.Syntax
-import Language.GCL.Syntax.Helpers (pattern T, (∧), (⟹), (¬), ifEqExpr )
+import Language.GCL.Syntax.Helpers
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable
 import Language.GCL.Verification.Simplification (simplify)
+import Data.Bool (bool)
 
 subst :: Id -> Expr -> Pred -> Pred
 subst i e = para \case
@@ -16,7 +17,7 @@ subst i e = para \case
 
 repBy :: Id -> Expr -> Expr -> Pred -> Pred
 repBy a i e = cata \case
-  z@(Subscript a' i') | a == a' -> ifEqExpr i i' e $ Fix z
+  z@(Subscript a' i') | a == a' -> IfEq' i i' e $ Fix z
   z -> Fix z
 
 reduce:: [Pred] -> [Pred]
@@ -26,14 +27,13 @@ wlp :: Bool -> Stmt -> [Pred] -> [Pred]
 wlp smp = cata \case
   Skip -> id
   Assign i e -> map $ subst i e
-  Seq s₁ s₂ -> s₁ . s₂
-  Assert e -> map (e ∧)
-  Assume e -> map (e ⟹)
-  If g s₁ s₂ -> \q -> simplify $ map (g ⟹) (s₁ q) <> map ((¬)g ⟹) (s₂ q)
+  Seq s1 s2 -> s1 . s2
+  Assert e -> map (e :&&)
+  Assume e -> map (e :=>)
+  If g s1 s2 -> \q -> bool id reduce smp $ map (g :=>) (s1 q) <> map (Not' g :=>) (s2 q)
   AssignIndex a i e -> map $ repBy a i e
   Let _ s -> s
   While{} -> error "wlp: While not supported"
-  where simplify = if smp then reduce else id
 
 runWLP :: Program -> [Pred]
 runWLP Program{..} = wlp True programBody [T]
