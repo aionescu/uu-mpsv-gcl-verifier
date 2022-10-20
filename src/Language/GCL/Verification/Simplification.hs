@@ -10,20 +10,10 @@ simplify :: Pred -> Pred
 simplify = cata go
   where
     go = \case
-      Op Implies a b -> go $ Op Or (go $ Not a) b
-
-      Op And F _ -> F
-      Op And T a -> a
-      Op And _ F -> F
-      Op And a T -> a
-
-      Op Or T _ -> T
-      Op Or F a -> a
-      Op Or _ T -> T
-      Op Or a F -> a
-
       Not (B b) -> B $ not b
       Not (Fix (Not a)) -> a
+      Not (Fix (Forall v e)) -> go $ Exists v $ go $ Not e
+      Not (Fix (Exists v e)) -> go $ Forall v $ go $ Not e
 
       Not (Fix (Op o a b))
         | And <- o -> go $ Op Or (go $ Not a) $ go $ Not b
@@ -41,6 +31,21 @@ simplify = cata go
       Negate (Fix (Op Add a b)) -> go $ Op Add (go $ Negate a) $ go $ Negate b
       Negate (Fix (Op Mul a b)) -> go $ Op Mul a $ go $ Negate b
 
+      Forall _ b@B{} -> b
+      Exists _ b@B{} -> b
+
+      Op Implies a b -> go $ Op Or (go $ Not a) b
+
+      Op And F _ -> F
+      Op And T a -> a
+      Op And _ F -> F
+      Op And a T -> a
+
+      Op Or T _ -> T
+      Op Or F a -> a
+      Op Or _ T -> T
+      Op Or a F -> a
+
       Op o (I a) (I b)
         | Add <- o -> I $ a + b
         | Sub <- o -> I $ a - b
@@ -57,6 +62,9 @@ simplify = cata go
       Op o (Fix (Var a)) (Fix (Var a'))
         | a == a' && o `elem` [Eq, Lte, Gte] -> T
         | a == a' && o `elem` [Neq, Lt, Gt] -> F
+        | a == a', Add <- o -> go $ Op Mul (Fix $Var a) $ I 2
+        | a == a', Sub <- o -> I 0
+        | a == a', Div <- o -> I 1
 
       Op o (Fix (Op o' a b)) c
         | o == o' && o `elem` [Add, Mul, And, Or] -> go $ Op o a $ go $ Op o b c

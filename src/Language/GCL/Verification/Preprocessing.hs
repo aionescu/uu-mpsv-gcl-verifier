@@ -44,11 +44,14 @@ uniqueId name = do
 
 substSt :: Id -> Id -> Stmt -> Stmt
 substSt id id' = cata \case
-        Assign i e | i == id -> Assign' id' $ substId id id' e
-        Assign i e -> Assign' i $ substId id id' e
+        Assign i e
+          | i == id -> Assign' id' $ substId id id' e
+          | otherwise -> Assign' i $ substId id id' e
         Assert e -> Assert' $ substId id id' e
         Assume e -> Assume' $ substId id id' e
-        AssignIndex i e1 e2 | i == id -> AssignIndex' id' (substId id id' e1) (substId id id' e2)
+        AssignIndex i e1 e2
+          | i == id -> AssignIndex' id' (substId id id' e1) (substId id id' e2)
+          | otherwise -> AssignIndex' i (substId id id' e1) (substId id id' e2)
         If g t e -> If' (substId id id' g) t e
         While g s -> While' (substId id id' g) s
         p -> Fix p

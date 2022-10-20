@@ -20,7 +20,7 @@ repBy a i e = cata \case
   z -> Fix z
 
 wlp :: Bool -> Program -> [Pred]
-wlp noSimplify Program{..} = prune $ go programBody [T]
+wlp noSimplify Program{..} = prune $ Not' <$> go programBody [T]
   where
     prune
       | noSimplify = id

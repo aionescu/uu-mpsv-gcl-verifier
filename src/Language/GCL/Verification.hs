@@ -2,23 +2,18 @@ module Language.GCL.Verification(verify) where
 
 import Control.Monad(join, when, zipWithM_)
 import Control.Monad.Reader(ReaderT(..), asks, local)
-import Data.Bifunctor(Bifunctor(..))
-import Data.Bool(bool)
 import Data.Fix(Fix(..))
-import Data.Foldable(foldl')
-import Data.Functor((<&>))
 import Data.Functor.Foldable(cata)
 import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
-import Data.Text.IO qualified as T
 import Z3.Monad hiding (Opts, local, simplify)
 
 import Language.GCL.Opts
 import Language.GCL.Syntax
-import Language.GCL.Utils
 import Language.GCL.Verification.Preprocessing(preprocess)
 import Language.GCL.Verification.WLP(wlp)
+import Data.Maybe (isJust)
 
 type Env = Map Id AST
 type Z = ReaderT Env Z3
@@ -89,8 +84,13 @@ z3Expr = cata \case
     mkExists [] [sym] [sort] =<< local (M.insert i var) e
   Conditional g t e -> join $ mkIte <$> g <*> t <*> e
 
-checkValid :: Map Id Type -> Pred -> Z3 Bool
-checkValid v p = (z3Vars v >>= runReaderT (z3Expr p) >>= mkNot >>= assert) *> check <&> (== Unsat)
+checkSAT :: Map Id Type -> Pred -> Z3 (Maybe String)
+checkSAT v p =
+  (z3Vars v >>= runReaderT (z3Expr p) >>= assert)
+  *> solverCheckAndGetModel
+  >>= \case
+    (Sat, Just m) -> Just <$> modelToString m
+    _ -> pure Nothing
 
 verify :: Opts -> Program -> IO Bool
 verify Opts{..} program = do
@@ -98,16 +98,19 @@ verify Opts{..} program = do
     p = preprocess unrollDepth program
     vars = collectVars p
     preds = wlp noSimplify p
-    emoji = bool "❌" "✔️ "
 
-  results <- traverse (evalZ3 . checkValid vars) preds
+  results <- traverse (evalZ3 . checkSAT vars) preds
 
   let
     total = length results
-    (valid, invalid) = foldl' (flip (flip (bool second first) succ)) (0, 0) results
+    invalid = length $ filter isJust results
+
+    showResult p = \case
+      Nothing -> putStrLn $ "✔️  " <> show p
+      Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
 
   when showStats do
-    zipWithM_ (\r p -> T.putStrLn $ emoji r <> " " <> showT p) results preds
+    zipWithM_ showResult preds results
     putStrLn $ show invalid <> "/" <> show total <> " invalid paths"
 
-  pure $ total == valid
+  pure $ invalid == 0
