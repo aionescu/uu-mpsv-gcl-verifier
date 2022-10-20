@@ -2,8 +2,10 @@ module Language.GCL.Verification(verify) where
 
 import Control.Monad(join, when, zipWithM_)
 import Control.Monad.Reader(ReaderT(..), asks, local)
+import Data.Bifunctor(Bifunctor(..))
 import Data.Bool(bool)
 import Data.Fix(Fix(..))
+import Data.Foldable(foldl')
 import Data.Functor((<&>))
 import Data.Functor.Foldable(cata)
 import Data.Map.Strict(Map)
@@ -100,11 +102,12 @@ verify Opts{..} program = do
 
   results <- traverse (evalZ3 . checkValid vars) preds
 
+  let
+    total = length results
+    (valid, invalid) = foldl' (flip (flip (bool second first) succ)) (0, 0) results
+
   when showStats do
     zipWithM_ (\r p -> T.putStrLn $ emoji r <> " " <> showT p) results preds
+    putStrLn $ show invalid <> "/" <> show total <> " invalid paths"
 
-    putStrLn
-      $ "Verfied " <> show (length preds) <> " paths, out of which "
-      <> show (length $ filter not results) <> " were invalid"
-
-  pure $ and results
+  pure $ total == valid
