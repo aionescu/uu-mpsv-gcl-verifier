@@ -29,10 +29,9 @@ runRemoveShadowing Program{..} = Program{programBody=evalState (removeShadowing 
 removeShadowing :: Stmt -> State Counter Stmt
 removeShadowing = cataM \case
   Let dcs s -> do
-    n' <- removeShadowing s
     let names = map (\Decl{..} -> declName) dcs
     tr <- mapM uniqueId names
-    let n'' = foldl (flip $ uncurry substSt) n' $ zip names tr
+    let n'' = foldl (flip $ uncurry substSt) s $ zip names tr
     let dcs' = zipWith (\Decl{..} n' -> Decl{declName=n', ..}) dcs tr
     return $ Let' dcs' n''
   st -> return $ Fix st

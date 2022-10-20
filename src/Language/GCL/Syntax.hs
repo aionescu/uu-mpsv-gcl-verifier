@@ -26,7 +26,42 @@ data Op
   | Lte
   | Gt
   | Gte
-  deriving Eq
+  deriving (Eq, Enum, Bounded)
+
+precedence :: Op -> Int
+precedence = \case
+  Mul -> 8
+  Div -> 8
+  Add -> 7
+  Sub -> 7
+  Eq -> 6
+  Neq -> 6
+  Lt -> 5
+  Lte -> 5
+  Gt -> 5
+  Gte -> 5
+  And -> 4
+  Or -> 3
+  Implies -> 2
+
+data Assoc = L | R | N
+  deriving (Eq, Show)
+
+associativity :: Op -> Assoc
+associativity = \case
+  Add -> L
+  Sub -> L
+  Mul -> L
+  Div -> L
+  And -> R
+  Or -> R
+  Implies -> N
+  Eq -> N
+  Neq -> N
+  Lt -> N
+  Lte -> N
+  Gt -> N
+  Gte -> N
 
 data ExprF e
   = IntLit Int
@@ -96,22 +131,6 @@ instance Show Op where
     Gt -> ">"
     Gte -> ">="
 
-precedence :: Op -> Int
-precedence = \case
-  Mul -> 8
-  Div -> 8
-  Add -> 7
-  Sub -> 7
-  Eq -> 6
-  Neq -> 6
-  Lt -> 5
-  Lte -> 5
-  Gt -> 5
-  Gte -> 5
-  And -> 4
-  Or -> 3
-  Implies -> 2
-
 showText :: Text -> ShowS
 showText = showString . unpack
 
@@ -122,11 +141,15 @@ instance Show1 ExprF where
     BoolLit b -> shows b
     Var v -> showText v
     Length v -> showChar '#' . showText v
-    Op o a b ->
-      let q = precedence o
-      in showParen (p > q) $ showE q a . showChar ' ' . shows o . showChar ' ' . showE q b
+    Op o a b -> showParen (p > q) $ showE ql a . showChar ' ' . shows o . showChar ' ' . showE qr b
+      where
+        q = precedence o
+        (ql, qr) = case associativity o of
+          L -> (q, q + 1)
+          R -> (q + 1, q)
+          N -> (q + 1, q + 1)
     Negate e -> showChar '-' . showE 9 e
-    Not e -> showChar '~' . showE 9 e
+    Not e -> showChar '!' . showE 9 e
     Subscript v e -> showText v . showChar '[' . showE 0 e . showChar ']'
     Forall v e -> showParen (p > 1) $ showString "forall " . showText v . showString ". " . showE 0 e
     Exists v e -> showParen (p > 1) $ showString "exists " . showText v . showString ". " . showE 0 e

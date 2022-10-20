@@ -5,6 +5,8 @@ import Data.Bifunctor(first)
 import Data.Fix(Fix(..))
 import Data.Function(on)
 import Data.Functor(($>))
+import Data.List(groupBy, sortOn)
+import Data.Ord(Down(..))
 import Data.Text(Text)
 import Data.Text qualified as T
 import Data.Void(Void)
@@ -14,7 +16,7 @@ import Text.Megaparsec.Char.Lexer qualified as L
 
 import Language.GCL.Opts
 import Language.GCL.Syntax hiding (block, decls)
-import Language.GCL.Utils((...))
+import Language.GCL.Utils((...), showT)
 
 type Parser = Parsec Void Text
 
@@ -80,21 +82,21 @@ exprAtom =
 
 operatorTable :: [[Operator Parser Expr]]
 operatorTable =
-  [ [ Prefix $ Fix . Negate <$ symbol "-" ]
-  , [ Prefix $ Fix . Not <$ symbol "~" ]
-  , [ opL "*" Mul, opL "/" Div ]
-  , [ opL "+" Add, opL "-" Sub ]
-  , [ opN "<=" Lte, opN ">=" Gte, opN "<" Lt, opN ">" Gt ]
-  , [ opN "==" Eq, opN "/=" Neq ]
-  , [ opR "&&" And ]
-  , [ opR "||" Or ]
-  , [ opN "=>" Implies ]
+  [ Prefix $ Fix . Negate <$ symbol "-"
+  , Prefix $ Fix . Not <$ symbol "!"
   ]
+  : ((mkOp <$>) <$> grouped [minBound ..])
   where
-    op f sym op = f $ Fix ... Op op <$ symbol sym
-    opL = op InfixL
-    opR = op InfixR
-    opN = op InfixN
+    grouped =
+      fmap (sortOn $ Down . length . show)
+      . groupBy ((==) `on` precedence)
+      . sortOn (Down . precedence)
+
+    mkOp op = infix' (associativity op) $ Fix ... Op op <$ symbol (showT op)
+    infix' = \case
+      L -> InfixL
+      R -> InfixR
+      N -> InfixN
 
 expr :: Parser Expr
 expr = makeExprParser exprAtom operatorTable
