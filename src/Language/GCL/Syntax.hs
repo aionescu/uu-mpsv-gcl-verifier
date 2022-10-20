@@ -12,7 +12,7 @@ data Type
   | Array Type
   deriving Eq
 
-data BinOp
+data Op
   = Add
   | Sub
   | Mul
@@ -33,8 +33,9 @@ data ExprF e
   | BoolLit Bool
   | Var Id
   | Length Id
-  | BinOp BinOp e e
+  | Op Op e e
   | Negate e
+  | Not e
   | Subscript Id e
   | Forall Id e
   | Exists Id e
@@ -79,7 +80,7 @@ instance Show Type where
     Bool -> "Bool"
     Array a -> "[" <> show a <> "]"
 
-instance Show BinOp where
+instance Show Op where
   show = \case
     Add -> "+"
     Sub -> "-"
@@ -95,7 +96,7 @@ instance Show BinOp where
     Gt -> ">"
     Gte -> ">="
 
-precedence :: BinOp -> Int
+precedence :: Op -> Int
 precedence = \case
   Mul -> 8
   Div -> 8
@@ -121,9 +122,10 @@ instance Show1 ExprF where
     BoolLit b -> shows b
     Var v -> showText v
     Length v -> showChar '#' . showText v
-    BinOp o a b ->
+    Op o a b ->
       let q = precedence o
       in showParen (p > q) $ showE q a . showChar ' ' . shows o . showChar ' ' . showE q b
+    Not e -> showChar '~' . showE 9 e
     Negate e -> showChar '~' . showE 9 e
     Subscript v e -> showText v . showChar '[' . showE 0 e . showChar ']'
     Forall v e -> showParen (p > 1) $ showString "forall " . showText v . showString ". " . showE 0 e
@@ -170,10 +172,10 @@ instance Eq1 ExprF where
   liftEq _ (BoolLit a) (BoolLit b) = a == b
   liftEq _ (Var a) (Var b) = a == b
   liftEq _ (Length a) (Length b) = a == b
-  liftEq f (BinOp o1 a1 b1) (BinOp o2 a2 b2) = o1 == o2 && f a1 a2 && f b1 b2 
+  liftEq f (Op o1 a1 b1) (Op o2 a2 b2) = o1 == o2 && f a1 a2 && f b1 b2
   liftEq f (Negate a) (Negate b) = f a b
   liftEq f (Subscript i1 a) (Subscript i2 b) = f a b && i1 == i2
   liftEq f (Forall i1 a) (Forall i2 b) = f a b && i1 == i2
   liftEq f (Exists i1 a) (Exists i2 b) = f a b && i1 == i2
-  liftEq f (Conditional a1 a2 a3) (Conditional b1 b2 b3) = f a1 b1 && f a2 b2 && f a3 b3 
+  liftEq f (Conditional a1 a2 a3) (Conditional b1 b2 b3) = f a1 b1 && f a2 b2 && f a3 b3
   liftEq _ _ _ = False

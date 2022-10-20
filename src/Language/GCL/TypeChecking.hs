@@ -37,12 +37,13 @@ typeInferExpr = cata \case
   BoolLit{} -> pure Bool
   Var v -> lookupVar v
   Length v -> (lookupVar v >>= unArray) $> Int
-  BinOp op a b
+  Op op a b
     | op `elem` [Add, Sub, Mul, Div] -> check Int a *> check Int b $> Int
     | op `elem` [And, Or, Implies] -> check Bool a *> check Bool b $> Bool
     | op `elem` [Eq, Neq, Lt, Lte, Gt, Gte] -> check Int a *> check Int b $> Bool
     | otherwise -> error "typeInferExpr: Unreachable"
-  Negate e -> check Bool e $> Bool
+  Negate e -> check Int e $> Int
+  Not e -> check Bool e $> Bool
   Subscript v e -> check Int e *> lookupVar v >>= unArray
   Forall v e -> with [Decl v Int] $ check Bool e $> Bool
   Exists v e -> with [Decl v Int] $ check Bool e $> Bool

@@ -18,27 +18,25 @@ pattern F :: Expr
 pattern F = B False
 
 (∧) :: Expr -> Expr -> Expr
-(∧) = Fix ... BinOp And
+(∧) = Fix ... Op And
 
 (∨) :: Expr -> Expr -> Expr
-(∨) = Fix ... BinOp Or
+(∨) = Fix ... Op Or
 
 (⟹) :: Expr -> Expr -> Expr
-(⟹) = Fix ... BinOp Implies
+(⟹) = Fix ... Op Implies
 
 (¬) :: Expr -> Expr
-(¬) = Fix . Negate
+(¬) = Fix . Not
 
 ifEqExpr :: Expr -> Expr -> Expr -> Expr -> Expr
-ifEqExpr a b e1 e2 = Fix $ Conditional (Fix $ BinOp Eq a b) e1 e2
-
+ifEqExpr a b e1 e2 = Fix $ Conditional (Fix $ Op Eq a b) e1 e2
 
 assertSt :: Expr -> Stmt
 assertSt = Fix . Assert
 
 assumeSt :: Expr -> Stmt
 assumeSt = Fix . Assume
-
 
 ifSt :: Expr -> Stmt -> Stmt -> Stmt
 ifSt e s1 s2= Fix $ If e s1 s2

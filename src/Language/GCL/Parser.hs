@@ -12,7 +12,7 @@ import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer qualified as L
 
-import Language.GCL.Syntax
+import Language.GCL.Syntax hiding (block, decls)
 import Language.GCL.Utils((...))
 import Language.GCL.Syntax.Helpers (skipSt, assumeSt, assertSt, assignIndexSt, assignSt, ifSt, whileSt, letSt, seqSt)
 
@@ -80,7 +80,8 @@ exprAtom =
 
 operatorTable :: [[Operator Parser Expr]]
 operatorTable =
-  [ [ Prefix $ Fix . Negate <$ symbol "~" ]
+  [ [ Prefix $ Fix . Negate <$ symbol "-" ]
+  , [ Prefix $ Fix . Not <$ symbol "~" ]
   , [ opL "*" Mul, opL "/" Div ]
   , [ opL "+" Add, opL "-" Sub ]
   , [ opN "<=" Lte, opN ">=" Gte, opN "<" Lt, opN ">" Gt ]
@@ -90,7 +91,7 @@ operatorTable =
   , [ opN "=>" Implies ]
   ]
   where
-    op f sym op = f $ Fix ... BinOp op <$ symbol sym
+    op f sym op = f $ Fix ... Op op <$ symbol sym
     opL = op InfixL
     opR = op InfixR
     opN = op InfixN
@@ -111,34 +112,34 @@ stmtSimple =
 stmtCompound :: Parser Stmt
 stmtCompound =
   choice
-  [ ifSt <$> (symbol "if" *> expr) <*> blockP <*> ((symbol "else" *> blockP) <|> pure skipSt)
-  , whileSt <$> (symbol "while" *> expr) <*> blockP
-  , letSt <$> (symbol "let" *> declsP) <*> blockP
-  , blockP
+  [ ifSt <$> (symbol "if" *> expr) <*> block <*> ((symbol "else" *> block) <|> pure skipSt)
+  , whileSt <$> (symbol "while" *> expr) <*> block
+  , letSt <$> (symbol "let" *> decls) <*> block
+  , block
   ] <* optional (symbol ";")
 
 stmt :: Parser Stmt
 stmt = stmtSimple <|> stmtCompound
 
-blockP :: Parser Stmt
-blockP = btwn "{" "}" $ seq <$> many stmt
+block :: Parser Stmt
+block = btwn "{" "}" $ seq <$> many stmt
   where
     seq [] = skipSt
     seq xs = foldr1 seqSt xs
 
-declP :: Parser Decl
-declP = Decl <$> (ident <* symbol ":") <*> type'
+decl :: Parser Decl
+decl = Decl <$> (ident <* symbol ":") <*> type'
 
-declsP :: Parser [Decl]
-declsP = declP `sepEndBy` symbol ","
+decls :: Parser [Decl]
+decls = decl `sepEndBy` symbol ","
 
 program :: Parser Program
 program =
   Program
   <$> ident
-  <*> btwn "(" ")" declsP
-  <*> (symbol "->" *> declP)
-  <*> blockP
+  <*> btwn "(" ")" decls
+  <*> (symbol "->" *> decl)
+  <*> block
 
 parse :: FilePath -> Text -> Either Text Program
 parse path =

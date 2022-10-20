@@ -3,39 +3,39 @@ module Language.GCL.Verification.Simplification(simplify) where
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable(cata)
 
-import Language.GCL.Syntax ( BinOp(..), ExprF(BinOp, Negate, Var), Pred )
+import Language.GCL.Syntax ( Op(..), ExprF(Op, Negate, Var), Pred )
 import Language.GCL.Syntax.Helpers ( pattern F, pattern T, pattern B, pattern I )
 
-isCommutative :: BinOp -> Bool
+isCommutative :: Op -> Bool
 isCommutative o = o `elem` [Add, Mul]
 
-isAssociative :: BinOp -> Bool
+isAssociative :: Op -> Bool
 isAssociative o = o `elem` [Add, Mul, And, Or]
 
 simplify :: Pred -> Pred
 simplify = cata go
   where
     go = \case
-      BinOp And F _ -> F
-      BinOp And T a -> a
-      BinOp Or T _ -> T
-      BinOp Or F a -> a
+      Op And F _ -> F
+      Op And T a -> a
+      Op Or T _ -> T
+      Op Or F a -> a
 
-      BinOp And _ F -> F
-      BinOp And a T -> a
-      BinOp Or _ T -> T
-      BinOp Or a F -> a
+      Op And _ F -> F
+      Op And a T -> a
+      Op Or _ T -> T
+      Op Or a F -> a
 
-      BinOp Implies F _ -> T
-      BinOp Implies T a -> a
-      BinOp Implies _ T -> T
-      BinOp Implies a F -> go $ Negate a
+      Op Implies F _ -> T
+      Op Implies T a -> a
+      Op Implies _ T -> T
+      Op Implies a F -> go $ Negate a
 
       Negate (B b) -> B $ not b
       Negate (I i) -> I -i
       Negate (Fix (Negate a)) -> a
 
-      BinOp o (I a) (I b)
+      Op o (I a) (I b)
         | Add <- o -> I $ a + b
         | Sub <- o -> I $ a - b
         | Mul <- o -> I $ a * b
@@ -48,16 +48,16 @@ simplify = cata go
         | Gt <- o -> B $ a > b
         | Gte <- o -> B $ a >= b
 
-      BinOp o (Fix (Var a)) (Fix (Var a'))
+      Op o (Fix (Var a)) (Fix (Var a'))
         | a == a' && o `elem` [Eq, Lte, Gte] -> T
         | a == a' && o `elem` [Neq, Lt, Gt] -> F
 
-      BinOp o (Fix (BinOp o' a b)) c
-        | o == o' && isAssociative o -> go $ BinOp o a $ go $ BinOp o b c
+      Op o (Fix (Op o' a b)) c
+        | o == o' && isAssociative o -> go $ Op o a $ go $ Op o b c
 
-      BinOp o a@I{} b
-        | isCommutative o -> go $ BinOp o b a
+      Op o a@I{} b
+        | isCommutative o -> go $ Op o b a
 
-      BinOp Sub (Fix (BinOp Sub e (I a))) (I b) -> go $ BinOp Sub e $ I $ a + b
+      Op Sub (Fix (Op Sub e (I a))) (I b) -> go $ Op Sub e $ I $ a + b
 
       p -> Fix p

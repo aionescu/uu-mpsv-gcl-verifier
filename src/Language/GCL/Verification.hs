@@ -44,7 +44,7 @@ z3Vars = M.traverseWithKey go
       Bool -> mkBool False
       _ -> error "z3Vars: Nested arrays are not supported"
 
-z3Op :: BinOp -> AST -> AST -> Z AST
+z3Op :: Op -> AST -> AST -> Z AST
 z3Op op a b =
   case op of
     Add -> mkAdd [a, b]
@@ -67,8 +67,9 @@ z3Expr = cata \case
   BoolLit b -> mkBool b
   Var v -> asks (M.! v)
   Length v -> asks (M.! ("#" <> v))
-  BinOp o a b -> join $ z3Op o <$> a <*> b
-  Negate a -> mkNot =<< a
+  Op o a b -> join $ z3Op o <$> a <*> b
+  Negate a -> mkUnaryMinus =<< a
+  Not a -> mkNot =<< a
   Subscript a _ -> asks (M.! a)
   Forall i e -> do
     sym <- mkStringSymbol $ T.unpack i
@@ -103,5 +104,3 @@ verify p = do
   unless (null failed) $ print ("Invalid paths:" :: String)
   mapM_ print failed
   return (if all isValid r then "✔️" else "❌")
-
-
