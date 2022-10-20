@@ -3,7 +3,7 @@ module Language.GCL.Verification.Simplification(simplify) where
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable(cata)
 
-import Language.GCL.Syntax ( Op(..), ExprF(Op, Negate, Var), Pred )
+import Language.GCL.Syntax ( Op(..), ExprF(..), Pred )
 import Language.GCL.Syntax.Helpers ( pattern F, pattern T, pattern B, pattern I )
 
 isCommutative :: Op -> Bool
@@ -18,20 +18,22 @@ simplify = cata go
     go = \case
       Op And F _ -> F
       Op And T a -> a
-      Op Or T _ -> T
-      Op Or F a -> a
-
       Op And _ F -> F
       Op And a T -> a
+
+      Op Or T _ -> T
+      Op Or F a -> a
       Op Or _ T -> T
       Op Or a F -> a
 
       Op Implies F _ -> T
       Op Implies T a -> a
       Op Implies _ T -> T
-      Op Implies a F -> go $ Negate a
+      Op Implies a F -> go $ Not a
 
-      Negate (B b) -> B $ not b
+      Not (B b) -> B $ not b
+      Not (Fix (Not a)) -> a
+
       Negate (I i) -> I -i
       Negate (Fix (Negate a)) -> a
 

@@ -25,6 +25,10 @@ unArray :: Type -> TC Type
 unArray (Array a) = pure a
 unArray t = throwError $ "Expected array type, found " <> showT t
 
+unPrim :: Type -> TC Type
+unPrim t@Array{} = throwError $ "Expected non-array type, found " <> showT t
+unPrim t = pure t
+
 check :: Type -> TC Type -> TC Type
 check expected m = m >>= \t ->
   if t == expected
@@ -40,7 +44,8 @@ typeInferExpr = cata \case
   Op op a b
     | op `elem` [Add, Sub, Mul, Div] -> check Int a *> check Int b $> Int
     | op `elem` [And, Or, Implies] -> check Bool a *> check Bool b $> Bool
-    | op `elem` [Eq, Neq, Lt, Lte, Gt, Gte] -> check Int a *> check Int b $> Bool
+    | op `elem` [Lt, Lte, Gt, Gte] -> check Int a *> check Int b $> Bool
+    | op `elem` [Eq, Neq] -> (a >>= unPrim >>= (`check` b)) $> Bool
     | otherwise -> error "typeInferExpr: Unreachable"
   Negate e -> check Int e $> Int
   Not e -> check Bool e $> Bool

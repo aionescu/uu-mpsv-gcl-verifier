@@ -125,8 +125,8 @@ instance Show1 ExprF where
     Op o a b ->
       let q = precedence o
       in showParen (p > q) $ showE q a . showChar ' ' . shows o . showChar ' ' . showE q b
+    Negate e -> showChar '-' . showE 9 e
     Not e -> showChar '~' . showE 9 e
-    Negate e -> showChar '~' . showE 9 e
     Subscript v e -> showText v . showChar '[' . showE 0 e . showChar ']'
     Forall v e -> showParen (p > 1) $ showString "forall " . showText v . showString ". " . showE 0 e
     Exists v e -> showParen (p > 1) $ showString "exists " . showText v . showString ". " . showE 0 e
@@ -174,6 +174,7 @@ instance Eq1 ExprF where
   liftEq _ (Length a) (Length b) = a == b
   liftEq f (Op o1 a1 b1) (Op o2 a2 b2) = o1 == o2 && f a1 a2 && f b1 b2
   liftEq f (Negate a) (Negate b) = f a b
+  liftEq f (Not a) (Not b) = f a b
   liftEq f (Subscript i1 a) (Subscript i2 b) = f a b && i1 == i2
   liftEq f (Forall i1 a) (Forall i2 b) = f a b && i1 == i2
   liftEq f (Exists i1 a) (Exists i2 b) = f a b && i1 == i2
