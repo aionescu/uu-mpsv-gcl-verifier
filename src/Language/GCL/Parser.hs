@@ -111,34 +111,34 @@ stmtSimple =
 stmtCompound :: Parser Stmt
 stmtCompound =
   choice
-  [ ifSt <$> (symbol "if" *> expr) <*> block <*> ((symbol "else" *> block) <|> pure skipSt)
-  , whileSt <$> (symbol "while" *> expr) <*> block
-  , letSt <$> (symbol "let" *> decls) <*> block
-  , block
+  [ ifSt <$> (symbol "if" *> expr) <*> blockP <*> ((symbol "else" *> blockP) <|> pure skipSt)
+  , whileSt <$> (symbol "while" *> expr) <*> blockP
+  , letSt <$> (symbol "let" *> declsP) <*> blockP
+  , blockP
   ] <* optional (symbol ";")
 
 stmt :: Parser Stmt
 stmt = stmtSimple <|> stmtCompound
 
-block :: Parser Stmt
-block = btwn "{" "}" $ seq <$> many stmt
+blockP :: Parser Stmt
+blockP = btwn "{" "}" $ seq <$> many stmt
   where
     seq [] = skipSt
     seq xs = foldr1 seqSt xs
 
-decl :: Parser Decl
-decl = Decl <$> (ident <* symbol ":") <*> type'
+declP :: Parser Decl
+declP = Decl <$> (ident <* symbol ":") <*> type'
 
-decls :: Parser [Decl]
-decls = decl `sepEndBy` symbol ","
+declsP :: Parser [Decl]
+declsP = declP `sepEndBy` symbol ","
 
 program :: Parser Program
 program =
   Program
   <$> ident
-  <*> btwn "(" ")" decls
-  <*> (symbol "->" *> decl)
-  <*> block
+  <*> btwn "(" ")" declsP
+  <*> (symbol "->" *> declP)
+  <*> blockP
 
 parse :: FilePath -> Text -> Either Text Program
 parse path =

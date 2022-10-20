@@ -1,6 +1,6 @@
 module Language.GCL.Verification(verify) where
 
-import Control.Monad(join)
+import Control.Monad(join, unless)
 import Control.Monad.Reader(ReaderT(..), asks, local)
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable(cata)
@@ -12,9 +12,7 @@ import Z3.Monad hiding (local, simplify)
 import Language.GCL.Syntax
 import Language.GCL.Verification.Preprocessing(preprocess)
 import Language.GCL.Verification.WLP(runWLP)
-import Language.GCL.Verification.Simplification (simplify)
 import Data.Text (Text)
-import Debug.Trace (traceShowId)
 
 type Env = Map Id AST
 type Z = ReaderT Env Z3
@@ -87,9 +85,23 @@ z3Expr = cata \case
 checkPred :: Map Id Type -> Pred -> Z3 Result
 checkPred v p = (z3Vars v >>= runReaderT (z3Expr p) >>= mkNot >>= assert) *> check
 
+verifyPath :: Map Id Type -> Pred -> IO Result
+verifyPath m p = evalZ3 $ checkPred m p
+
 verify :: Program -> IO Text
 verify p = do
-  sat <- evalZ3 $ checkPred <$> collectVars <*> traceShowId . simplify . runWLP $ preprocess p
-  pure case sat of
-    Unsat -> "✔️"
-    _ -> "❌"
+  let preprocessed = preprocess p
+  let preds = runWLP preprocessed
+  let vars = collectVars preprocessed
+  r <- mapM (verifyPath vars) preds
+  let isValid = \case
+        Unsat -> True
+        _ -> False
+  print $ "Verfied " ++ show (length r) ++ " paths"
+
+  let failed = (map fst . filter (not . isValid . snd) . zip preds) r
+  unless (null failed) $ print ("Invalid paths:" :: String)
+  mapM_ print failed
+  return (if all isValid r then "✔️" else "❌")
+
+
