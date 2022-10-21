@@ -24,7 +24,7 @@ wlp noSimplify Program{..} = prune $ Not' <$> go programBody [T]
   where
     prune
       | noSimplify = id
-      | otherwise = filter (\case T -> False; _ -> True) . fmap simplify
+      | otherwise = filter (\case F -> False; _ -> True) . fmap simplify
 
     go :: Stmt -> [Pred] -> [Pred]
     go = cata \case
