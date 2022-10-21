@@ -14,6 +14,7 @@ import Language.GCL.Syntax
 import Language.GCL.Verification.Preprocessing(preprocess)
 import Language.GCL.Verification.WLP(wlp)
 import Data.Maybe (isJust)
+import Data.Functor ((<&>))
 
 type Env = Map Id AST
 type Z = ReaderT Env Z3
@@ -73,24 +74,17 @@ z3Expr = cata \case
   Not a -> mkNot =<< a
   Subscript a _ -> asks (M.! a)
   Forall i e -> do
-    sym <- mkStringSymbol $ T.unpack i
-    sort <- mkIntSort
-    var <- mkVar sym sort
-    mkForall [] [sym] [sort] =<< local (M.insert i var) e
+    var <- mkFreshIntVar $ T.unpack i
+    app <- toApp var
+    mkForallConst [] [app] =<< local (M.insert i var) e
   Exists i e -> do
-    sym <- mkStringSymbol $ T.unpack i
-    sort <- mkIntSort
-    var <- mkVar sym sort
-    mkExists [] [sym] [sort] =<< local (M.insert i var) e
+    var <- mkFreshIntVar $ T.unpack i
+    app <- toApp var
+    mkExistsConst [] [app] =<< local (M.insert i var) e
   Conditional g t e -> join $ mkIte <$> g <*> t <*> e
 
 checkSAT :: Map Id Type -> Pred -> Z3 (Maybe String)
-checkSAT v p =
-  (z3Vars v >>= runReaderT (z3Expr p) >>= assert)
-  *> solverCheckAndGetModel
-  >>= \case
-    (Sat, Just m) -> Just <$> modelToString m
-    _ -> pure Nothing
+checkSAT v p = (z3Vars v >>= runReaderT (z3Expr p) >>= assert) *> withModel modelToString <&> snd
 
 verify :: Opts -> Program -> IO Bool
 verify Opts{..} program = do

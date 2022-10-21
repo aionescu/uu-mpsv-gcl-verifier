@@ -125,7 +125,7 @@ instance Show Op where
     Or -> "||"
     Implies -> "=>"
     Eq -> "=="
-    Neq -> "/="
+    Neq -> "!="
     Lt -> "<"
     Lte -> "<="
     Gt -> ">"

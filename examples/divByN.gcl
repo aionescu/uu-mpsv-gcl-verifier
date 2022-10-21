@@ -1,0 +1,4 @@
+divByN(x: Int) -> divisible: Bool {
+  assume x == 10;
+  assert exists m. 0 < m && m <= x && m * 2 == x;
+}

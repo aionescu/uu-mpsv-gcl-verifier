@@ -1,3 +1,0 @@
-incorrect1(x: Int) -> y: Int {
-  assert x == 7;
-}
