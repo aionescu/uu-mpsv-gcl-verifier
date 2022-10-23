@@ -46,6 +46,16 @@ simplify = cata go
       Op Or _ T -> T
       Op Or a F -> a
 
+      Op Eq T a -> a
+      Op Eq F a -> go $ Not a
+      Op Eq a T -> a
+      Op Eq a F -> go $ Not a
+
+      Op Neq T a -> go $ Not a
+      Op Neq F a -> a
+      Op Neq a T -> go $ Not a
+      Op Neq a F -> a
+
       Op o (I a) (I b)
         | Add <- o -> I $ a + b
         | Sub <- o -> I $ a - b

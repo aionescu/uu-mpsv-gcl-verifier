@@ -1,6 +1,6 @@
 module Language.GCL.Verification(verify) where
 
-import Control.Monad(join, when, zipWithM_)
+import Control.Monad(join, when, zipWithM_, unless)
 import Control.Monad.Reader(ReaderT(..), asks, local)
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable(cata)
@@ -15,6 +15,7 @@ import Language.GCL.Verification.Preprocessing(preprocess)
 import Language.GCL.Verification.WLP(wlp)
 import Data.Maybe (isJust)
 import Data.Functor ((<&>))
+import Text.Printf (printf)
 
 type Env = Map Id AST
 type Z = ReaderT Env Z3
@@ -86,6 +87,9 @@ z3Expr = cata \case
 checkSAT :: Map Id Type -> Pred -> Z3 (Maybe String)
 checkSAT v p = (z3Vars v >>= runReaderT (z3Expr p) >>= assert) *> withModel modelToString <&> snd
 
+ratio :: Int -> Int -> String
+ratio a b = printf "%d/%d (%.2f%%)" a b $ fromIntegral  a * (100 :: Double) / fromIntegral b
+
 verify :: Opts -> Program -> IO Bool
 verify Opts{..} program = do
   let
@@ -103,8 +107,16 @@ verify Opts{..} program = do
       Nothing -> putStrLn $ "✔️  " <> show p
       Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
 
+  when showUnrolled do
+    print p
+
   when showStats do
     zipWithM_ showResult preds results
-    putStrLn $ show invalid <> "/" <> show total <> " invalid paths"
+
+    unless noSimplify do
+      let unpruned = length $ wlp True p
+      putStrLn $ "Pruned paths: " <> ratio (unpruned - total) unpruned
+
+    putStrLn $ "Invalid paths: " <> ratio invalid total
 
   pure $ invalid == 0

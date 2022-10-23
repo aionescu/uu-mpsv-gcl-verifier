@@ -20,11 +20,15 @@ repBy a i e = cata \case
   z -> Fix z
 
 wlp :: Bool -> Program -> [Pred]
-wlp noSimplify Program{..} = prune $ Not' <$> go programBody [T]
+wlp noSimplify Program{..} = pruneF $ Not' <$> go programBody [T]
   where
-    prune
+    pruneF
       | noSimplify = id
       | otherwise = filter (\case F -> False; _ -> True) . fmap simplify
+
+    prune
+      | noSimplify = id
+      | otherwise = filter (\case T -> False; _ -> True) . fmap simplify
 
     go :: Stmt -> [Pred] -> [Pred]
     go = cata \case

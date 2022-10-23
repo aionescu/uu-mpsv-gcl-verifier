@@ -1,0 +1,11 @@
+whileLet(x: Int) -> y: Int {
+  while x > 0 {
+    let k: Int, i: Int {
+      k = x;
+      i = k;
+      y = k;
+    }
+
+    x = x - 1;
+  }
+}
