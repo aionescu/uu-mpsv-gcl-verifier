@@ -16,6 +16,9 @@ import Language.GCL.Verification.WLP(wlp)
 import Data.Maybe (isJust)
 import Data.Functor ((<&>))
 import Text.Printf (printf)
+import System.CPUTime (getCPUTime)
+import Language.GCL.Syntax.Helpers (atoms)
+import Data.List (sort)
 
 type Env = Map Id AST
 type Z = ReaderT Env Z3
@@ -97,7 +100,9 @@ verify Opts{..} program = do
     vars = collectVars p
     preds = wlp noSimplify p
 
+  tStart <- getCPUTime
   results <- traverse (evalZ3 . checkSAT vars) preds
+  tEnd <- getCPUTime
 
   let
     total = length results
@@ -118,5 +123,16 @@ verify Opts{..} program = do
       putStrLn $ "Pruned paths: " <> ratio (unpruned - total) unpruned
 
     putStrLn $ "Invalid paths: " <> ratio invalid total
+
+    let
+      sizes = atoms <$> preds
+      avg :: Double = fromIntegral (sum sizes) / fromIntegral (length sizes)
+      median = sort sizes !! (length sizes `quot` 2)
+
+    unless (null preds) do
+      printf "Formula size (in atoms): average %.2f, median %d\n" avg median
+
+    let time :: Double = fromIntegral (tEnd - tStart) / 1e12
+    printf "Time elapsed: %.3fs\n" time
 
   pure $ invalid == 0

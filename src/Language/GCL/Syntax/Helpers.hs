@@ -3,6 +3,7 @@ module Language.GCL.Syntax.Helpers where
 import Data.Fix(Fix(..))
 
 import Language.GCL.Syntax
+import Data.Functor.Foldable (cata)
 
 pattern I :: Int -> Expr
 pattern I i = Fix (IntLit i)
@@ -57,3 +58,13 @@ pattern AssignIndex' i e e2 = Fix (AssignIndex i e e2)
 
 pattern Assign' :: Id -> Expr -> Stmt
 pattern Assign' i e = Fix (Assign i e)
+
+atoms :: Pred -> Int
+atoms = cata \case
+  Op o a b
+    | o `elem` [And, Or, Implies] -> a + b
+  Not b -> b
+  Forall _ b -> b
+  Exists _ b -> b
+  Conditional g _ _ -> g
+  _ -> 1
