@@ -13,8 +13,8 @@ import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers
 import Language.GCL.Utils
 
-preprocess :: Int -> Program -> Program
-preprocess k = runRemoveShadowing . unrollLoops k
+preprocess :: Program -> Program
+preprocess = runRemoveShadowing
 
 unroll :: Int -> Expr -> Stmt -> Stmt
 unroll 0 g _ = Assume' $ Not' g

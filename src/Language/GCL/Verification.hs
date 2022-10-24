@@ -87,8 +87,8 @@ z3Expr = cata \case
     mkExistsConst [] [app] =<< local (M.insert i var) e
   Conditional g t e -> join $ mkIte <$> g <*> t <*> e
 
-checkSAT :: Map Id Type -> Pred -> Z3 (Maybe String)
-checkSAT v p = (z3Vars v >>= runReaderT (z3Expr p) >>= assert) *> withModel modelToString <&> snd
+checkValid :: Map Id Type -> Pred -> Z3 (Maybe String)
+checkValid v p = (z3Vars v >>= runReaderT (z3Expr p) >>= mkNot >>= assert) *> withModel modelToString <&> snd
 
 ratio :: Int -> Int -> String
 ratio a b = printf "%d/%d (%.2f%%)" a b $ fromIntegral  a * (100 :: Double) / fromIntegral b
@@ -96,12 +96,12 @@ ratio a b = printf "%d/%d (%.2f%%)" a b $ fromIntegral  a * (100 :: Double) / fr
 verify :: Opts -> Program -> IO Bool
 verify Opts{..} program = do
   let
-    p = preprocess unrollDepth program
+    p = preprocess program
     vars = collectVars p
-    preds = wlp noSimplify p
+    preds = wlp noSimplify depth p
 
   tStart <- getCPUTime
-  results <- traverse (evalZ3 . checkSAT vars) preds
+  results <- traverse (evalZ3 . checkValid vars) preds
   tEnd <- getCPUTime
 
   let
@@ -112,14 +112,14 @@ verify Opts{..} program = do
       Nothing -> putStrLn $ "✔️  " <> show p
       Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
 
-  when showUnrolled do
+  when dumpAST do
     print p
 
   when showStats do
     zipWithM_ showResult preds results
 
     unless noSimplify do
-      let unpruned = length $ wlp True p
+      let unpruned = length $ wlp True depth p
       putStrLn $ "Pruned paths: " <> ratio (unpruned - total) unpruned
 
     putStrLn $ "Invalid paths: " <> ratio invalid total

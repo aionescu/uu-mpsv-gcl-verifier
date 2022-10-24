@@ -1,0 +1,10 @@
+a(x: Int) -> y: Int {
+  assume x == 5;
+
+  while x > 0 {
+    y = x;
+    x = x - 1;
+  }
+
+  assert y == 1;
+}

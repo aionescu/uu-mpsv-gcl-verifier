@@ -1,10 +1,11 @@
 module Language.GCL.Verification.WLP(wlp) where
 
+import Data.Fix(Fix(..))
+import Data.Functor.Foldable(cata, para)
+
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers
-import Data.Fix(Fix(..))
-import Data.Functor.Foldable
-import Language.GCL.Verification.Simplification (simplify)
+import Language.GCL.Verification.Simplification(simplify)
 
 subst :: Id -> Expr -> Pred -> Pred
 subst i e = para \case
@@ -19,25 +20,28 @@ repBy a i e = cata \case
   z@(Subscript a' i') | a == a' -> IfEq' i i' e $ Fix z
   z -> Fix z
 
-wlp :: Bool -> Program -> [Pred]
-wlp noSimplify Program{..} = pruneF $ Not' <$> go programBody [T]
+wlp :: Bool -> Int -> Program -> [Pred]
+wlp noSimplify maxDepth Program{..} = prune $ go maxDepth programBody [T] $ const id
   where
-    pruneF
-      | noSimplify = id
-      | otherwise = filter (\case F -> False; _ -> True) . fmap simplify
+    go :: Int -> Stmt -> [Pred] -> (Int -> [Pred] -> k) -> k
+    go d _ _ k | d < 0 = k d []
+    go d s q k = case unFix s of
+      Skip -> k (d - 1) q
+      Assume e -> k (d - 1) $ (e :=>) <$> q
+      Assert e -> k (d - 1) $ (e :&&) <$> q
+      Assign v e -> k (d - 1) $ subst v e <$> q
+      AssignIndex v i e -> k (d - 1) $ repBy v i e <$> q
+      If g t e ->
+        go (d - 1) t q \_ t ->
+          go (d - 1) e q \_ e ->
+            k (d - 1) $ prune $ fmap (g :=>) t <> fmap (Not' g :=>) e
+      While g s ->
+        let s' = If' g (Seq' s s') Skip'
+        in go d s' q k
+      Seq a b -> go d b q \d q -> go d a q k
+      Let _ s -> go d s q k
 
+    prune :: [Pred] -> [Pred]
     prune
       | noSimplify = id
       | otherwise = filter (\case T -> False; _ -> True) . fmap simplify
-
-    go :: Stmt -> [Pred] -> [Pred]
-    go = cata \case
-      Skip -> id
-      Assign i e -> fmap $ subst i e
-      Seq s1 s2 -> s1 . s2
-      Assert e -> fmap (e :&&)
-      Assume e -> fmap (e :=>)
-      If g s1 s2 -> \q -> prune $ fmap (g :=>) (s1 q) <> fmap (Not' g :=>) (s2 q)
-      AssignIndex a i e -> fmap $ repBy a i e
-      Let _ s -> s
-      While{} -> error "wlp: Loops should have been eliminated by preprocessing"
