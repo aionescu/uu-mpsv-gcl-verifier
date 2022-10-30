@@ -1,9 +1,10 @@
 module Language.GCL.Syntax where
+
+import Control.Category((>>>))
 import Data.Fix(Fix(..))
 import Data.Functor.Classes(Show1(..), showsPrec1)
 import Data.List(intercalate)
 import Data.Text(Text, unpack)
-import Control.Category ((>>>))
 
 type Id = Text
 
@@ -76,7 +77,10 @@ data ExprF e
   | Forall Id e
   | Exists Id e
   | Conditional e e e
-  deriving (Functor, Foldable, Traversable)
+  deriving (Functor, Foldable, Traversable, Eq)
+
+instance {-# OVERLAPPING #-} Eq Expr where
+  Fix a == Fix b = a == b
 
 type Expr = Fix ExprF
 
@@ -100,6 +104,17 @@ data StmtF e
   deriving (Functor, Foldable, Traversable)
 
 type Stmt = Fix StmtF
+
+-- Linear statement
+data LStmt
+  = LAssume Expr
+  | LAssert Expr
+  | LAssign Id Expr
+  | LAssignIndex Id Expr Expr
+  deriving Eq
+
+-- Linear path
+type LPath = [LStmt]
 
 data Program = Program
   { programName :: Id,
@@ -182,6 +197,15 @@ instance {-# OVERLAPPING #-} Show Stmt where
     While e s -> "while " <> show e <> block s
     Seq s s2 -> show s <> "\n" <> show s2
     Let ds s -> "let " <> decls ds <> block s
+
+instance Show LStmt where
+  show e = show $ Fix $ case e of
+    LAssume e -> Assume e
+    LAssert e -> Assert e
+    LAssign v e -> Assign v e
+    LAssignIndex v i e -> AssignIndex v i e
+
+  showList l s = (show =<< l) <> s
 
 instance Show Program where
   show (Program n i o b) = unpack n <> "(" <> decls i <> ") -> " <> show o <> block b

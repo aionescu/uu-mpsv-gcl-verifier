@@ -1,47 +1,43 @@
-module Language.GCL.Verification.WLP(wlp) where
+module Language.GCL.Verification.WLP(wlp, conjunctiveWLP) where
 
+import Data.Bool(bool)
 import Data.Fix(Fix(..))
-import Data.Functor.Foldable(cata, para)
+import Data.Foldable(foldl')
+import Data.Functor.Foldable(cata)
 
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers
 import Language.GCL.Verification.Simplification(simplify)
 
 subst :: Id -> Expr -> Pred -> Pred
-subst i e = para \case
+subst i e = cata \case
   Var v | i == v -> e
   Length v | i == v -> e
-  Forall v (p, _) | i == v -> Fix $ Forall v p
-  Exists v (p, _) | i == v -> Fix $ Exists v p
-  p -> Fix $ snd <$> p
+  Forall v p | i == v -> Fix $ Forall v p
+  Exists v p | i == v -> Fix $ Exists v p
+  p -> Fix p
 
 repBy :: Id -> Expr -> Expr -> Pred -> Pred
 repBy a i e = cata \case
   z@(Subscript a' i') | a == a' -> IfEq' i i' e $ Fix z
   z -> Fix z
 
-wlp :: Bool -> Int -> Program -> [Pred]
-wlp noSimplify maxDepth Program{..} = prune $ go maxDepth programBody [T] $ const id
+wlp :: Bool -> LPath -> Pred
+wlp (bool simplify id -> simplify') = simplify' . foldr go T
   where
-    go :: Int -> Stmt -> [Pred] -> (Int -> [Pred] -> k) -> k
-    go d _ _ k | d < 0 = k d []
-    go d s q k = case unFix s of
-      Skip -> k (d - 1) q
-      Assume e -> k (d - 1) $ (e :=>) <$> q
-      Assert e -> k (d - 1) $ (e :&&) <$> q
-      Assign v e -> k (d - 1) $ subst v e <$> q
-      AssignIndex v i e -> k (d - 1) $ repBy v i e <$> q
-      If g t e ->
-        go (d - 1) t q \_ t ->
-          go (d - 1) e q \_ e ->
-            k (d - 1) $ prune $ fmap (g :=>) t <> fmap (Not' g :=>) e
-      While g s ->
-        let s' = If' g (Seq' s s') Skip'
-        in go d s' q k
-      Seq a b -> go d b q \d q -> go d a q k
-      Let _ s -> go d s q k
+    go :: LStmt -> Pred -> Pred
+    go = \case
+      LAssume e -> (e :=>)
+      LAssert e -> (e :&&)
+      LAssign v e -> subst v e
+      LAssignIndex v i e -> repBy v i e
 
-    prune :: [Pred] -> [Pred]
-    prune
-      | noSimplify = id
-      | otherwise = filter (\case T -> False; _ -> True) . fmap simplify
+conjunctiveWLP :: Bool -> LPath -> Pred
+conjunctiveWLP (bool simplify id -> simplify') = simplify' . foldl' go T
+  where
+    go :: Pred -> LStmt -> Pred
+    go q = \case
+      LAssume e -> e :&& q
+      LAssert{} -> q
+      LAssign v e -> subst v e q
+      LAssignIndex v i e -> repBy v i e q

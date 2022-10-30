@@ -26,9 +26,10 @@ executable gcl
     Language.GCL.TypeChecking
     Language.GCL.Utils
     Language.GCL.Verification
-    Language.GCL.Verification.Preprocessing
+    Language.GCL.Verification.Linearization
     Language.GCL.Verification.Simplification
     Language.GCL.Verification.WLP
+    Language.GCL.Verification.Z3
 
   build-depends:
     base >=4.15 && <5
