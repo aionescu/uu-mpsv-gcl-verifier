@@ -60,7 +60,7 @@ substId id id' = para \case
   p -> Fix $ snd <$> p
 
 linearize :: Bool -> Int -> Program -> IO [LPath]
-linearize noHeuristics maxDepth program@Program{..} = reverse <$> go maxDepth p [] (const pure)
+linearize noHeuristics maxDepth program@Program{..} = map reverse <$> go maxDepth p [] (const pure)
   where
     p = removeShadowing programBody
     vars = collectVars program
