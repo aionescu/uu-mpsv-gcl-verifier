@@ -18,11 +18,11 @@ ratio a b = printf "%d/%d (%.2f%%)" a b $ fromIntegral  a * (100 :: Double) / fr
 
 verify :: Opts -> Program -> IO Bool
 verify Opts{..} program@Program{..} = do
-  let progVars = collectVars program
+
   tStart <- getCPUTime
-  (paths, localVars) <- linearize noHeuristics depth program
+  (paths, vars) <- linearize noHeuristics depth program
   let preds = wlp noHeuristics <$> paths
-  results <- traverse (checkValid (progVars <> localVars)) preds
+  results <- traverse (checkValid vars) preds
 
   tEnd <- getCPUTime
 

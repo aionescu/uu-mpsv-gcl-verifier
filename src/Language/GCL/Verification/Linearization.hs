@@ -1,6 +1,6 @@
 module Language.GCL.Verification.Linearization where
 
-import Control.Monad(foldM)
+import Control.Monad(foldM, unless)
 import Control.Monad.State.Lazy(StateT, runStateT, get, put, liftIO)
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable(para)
@@ -55,10 +55,11 @@ substId id id' = para \case
   p -> Fix $ snd <$> p
 
 
-linearize :: Bool -> Int -> Program -> IO ([LPath], Map Id Type) 
-linearize noHeuristics maxDepth Program{..} = do
+linearize :: Bool -> Int -> Program -> IO ([LPath], Map Id Type)
+linearize noHeuristics maxDepth program@Program{..} = do
+  let progVars = collectVars program
   let lin = go maxDepth programBody [] (const pure)
-  (res, (_, vars)) <- runStateT lin (M.empty, M.empty)
+  (res, (_, vars)) <- runStateT lin (M.empty, progVars)
   return (map reverse res, vars)
   where
     prune'
@@ -70,6 +71,7 @@ linearize noHeuristics maxDepth Program{..} = do
     prune d s p k = do
       (_, vs) <- get
       checked <- liftIO $ checkSAT vs (conjunctiveWLP noHeuristics p)
+      unless checked $ liftIO $ print p
       (if checked then go d s p k else return [])
 
     go :: Int -> Stmt -> LPath -> (Int -> [LPath] -> Linearlizer [LPath]) -> Linearlizer [LPath]
@@ -89,7 +91,7 @@ linearize noHeuristics maxDepth Program{..} = do
       Seq a b -> do
         t <- go d b p k
         l <- go d a p k
-        return $ ((<>) <$> t) <*> l
+        return $ [ x <> y | x <- t, y <- l ]
       Let ds s -> do
         z <- go d s p k
         mapM (removeShadowing ds) z
