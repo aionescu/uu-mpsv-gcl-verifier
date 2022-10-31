@@ -9,7 +9,7 @@ import System.CPUTime(getCPUTime)
 import Language.GCL.Opts
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers(atoms)
-import Language.GCL.Verification.Linearization(linearize)
+import Language.GCL.Verification.Linearization(linearize, removeShadowing)
 import Language.GCL.Verification.WLP(wlp)
 import Language.GCL.Verification.Z3
 
@@ -38,7 +38,7 @@ verify Opts{..} program@Program{..} = do
       Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
 
   when dumpAST do
-    print programBody
+    print $ removeShadowing programBody
 
   when showStats do
     zipWithM_ showResult preds results
