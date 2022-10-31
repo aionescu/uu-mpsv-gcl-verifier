@@ -1,5 +1,6 @@
-module Language.GCL.Verification.Preprocessing where
+module Language.GCL.Verification.Linearization where
 
+import Control.Monad(join)
 import Control.Monad.State.Strict(State, evalState, gets, modify)
 import Data.Fix(Fix(..))
 import Data.Foldable(foldMap')
@@ -12,32 +13,13 @@ import Data.Monoid(Endo(..))
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers
 import Language.GCL.Utils
-
-preprocess :: Int -> Program -> Program
-preprocess k = runRemoveShadowing . unrollLoops k
-
-unroll :: Int -> Expr -> Stmt -> Stmt
-unroll 0 g _ = Assume' $ Not' g
-unroll n g s = If' g (Seq' s $ unroll (n - 1) g s) Skip'
-
-unrollLoops :: Int -> Program -> Program
-unrollLoops k Program{..} = Program{programBody = go programBody, ..}
-  where
-    go = cata \case
-      While g s -> unroll k g s
-      s -> Fix s
-
-runRemoveShadowing :: Program -> Program
-runRemoveShadowing Program{..} =
-  Program
-  { programBody = removeShadowing programBody `evalState` M.empty
-  , ..
-  }
+import Language.GCL.Verification.WLP
+import Language.GCL.Verification.Z3
 
 type Counters = Map Id Int
 
-removeShadowing :: Stmt -> State Counters Stmt
-removeShadowing = cataM \case
+removeShadowing :: Stmt -> Stmt
+removeShadowing = flip evalState M.empty . cataM \case
   Let decls s -> do
     let names = declName <$> decls
     fresh <- traverse uniqueId names
@@ -76,3 +58,33 @@ substId id id' = para \case
   Forall v (p, _) | id == v -> Fix $ Forall v p
   Exists v (p, _) | id == v -> Fix $ Exists v p
   p -> Fix $ snd <$> p
+
+linearize :: Bool -> Int -> Program -> IO [LPath]
+linearize noHeuristics maxDepth program@Program{..} = map reverse <$> go maxDepth p [] (const pure)
+  where
+    p = removeShadowing programBody
+    vars = collectVars program
+
+    prune'
+      | noHeuristics = go
+      | otherwise = prune
+
+    prune :: Int -> Stmt -> LPath -> (Int -> [LPath] -> IO [LPath]) -> IO [LPath]
+    prune d _ _ k | d < 0 = k d []
+    prune d s p k =
+      checkSAT vars (conjunctiveWLP noHeuristics p) >>= \case
+        True -> go d s p k
+        _ -> k d []
+
+    go :: Int -> Stmt -> LPath -> (Int -> [LPath] -> IO [LPath]) -> IO [LPath]
+    go d _ _ k | d < 0 = k d []
+    go d s p k = case unFix s of
+      Skip -> k d [p]
+      Assume e -> k (d - 1) [LAssume e : p]
+      Assert e -> k (d - 1) [LAssert e : p]
+      Assign v e -> k (d - 1) [LAssign v e : p]
+      AssignIndex v i e -> k (d - 1) [LAssignIndex v i e : p]
+      If g t e -> prune' (d - 1) t (LAssume g : p) k <> prune' (d - 1) e (LAssume (Not' g) : p) k
+      While g body -> go d (If' g (Seq' body s) Skip') p k
+      Seq a b -> go d a p \d ps -> join <$> traverse (\p -> go d b p k) ps
+      Let _ s -> go d s p k

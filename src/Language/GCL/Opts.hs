@@ -4,20 +4,20 @@ import Options.Applicative
 
 data Opts =
   Opts
-  { unrollDepth :: Int
-  , noSimplify :: Bool
+  { depth :: Int
+  , noHeuristics :: Bool
   , showStats :: Bool
-  , showUnrolled :: Bool
+  , dumpAST :: Bool
   , path :: FilePath
   }
 
 optsParser :: Parser Opts
 optsParser =
   Opts
-  <$> option auto (long "unroll-depth" <> value 10 <> metavar "K" <> help "How many iterations to unroll for each loop")
-  <*> switch (long "no-simplify" <> help "Disable frontend simplifier")
+  <$> option auto (long "depth" <> value 50 <> metavar "K" <> help "Maximum depth of program paths (default 50)")
+  <*> switch (long "no-heuristics" <> help "Disable feasiblity heuristics & frontend simplifier")
   <*> switch (long "show-stats" <> help "Show verification statistics")
-  <*> switch (long "show-unrolled" <> help "Show AST after pre-processing")
+  <*> switch (long "dump-ast" <> help "Show AST after parsing")
   <*> strArgument (metavar "PATH" <> help "The source file to verify")
 
 fullParser :: ParserInfo Opts
