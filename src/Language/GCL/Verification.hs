@@ -9,7 +9,7 @@ import System.CPUTime(getCPUTime)
 import Language.GCL.Opts
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers(atoms)
-import Language.GCL.Verification.Linearization(linearize, removeShadowing)
+import Language.GCL.Verification.Linearization(linearize)
 import Language.GCL.Verification.WLP(wlp)
 import Language.GCL.Verification.Z3
 
@@ -18,14 +18,11 @@ ratio a b = printf "%d/%d (%.2f%%)" a b $ fromIntegral  a * (100 :: Double) / fr
 
 verify :: Opts -> Program -> IO Bool
 verify Opts{..} program@Program{..} = do
-  let
-    vars = collectVars program
-
+  let progVars = collectVars program
   tStart <- getCPUTime
-
-  paths <- linearize noHeuristics depth program
+  (paths, localVars) <- linearize noHeuristics depth program
   let preds = wlp noHeuristics <$> paths
-  results <- traverse (checkValid vars) preds
+  results <- traverse (checkValid (progVars <> localVars)) preds
 
   tEnd <- getCPUTime
 
@@ -38,7 +35,7 @@ verify Opts{..} program@Program{..} = do
       Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
 
   when dumpAST do
-    print $ removeShadowing programBody
+    print programBody
 
   when showStats do
     zipWithM_ showResult preds results
