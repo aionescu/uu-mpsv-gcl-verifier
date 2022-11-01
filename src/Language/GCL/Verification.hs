@@ -21,7 +21,9 @@ verify Opts{..} program@Program{..} = do
 
   tStart <- getCPUTime
   (paths, vars) <- linearize noHeuristics depth program
+  print paths
   let preds = wlp noHeuristics <$> paths
+
   results <- traverse (checkValid vars) preds
 
   tEnd <- getCPUTime
