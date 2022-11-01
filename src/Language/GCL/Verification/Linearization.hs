@@ -1,6 +1,6 @@
 module Language.GCL.Verification.Linearization where
 
-import Control.Monad(foldM, unless)
+import Control.Monad(foldM, when)
 import Control.Monad.State.Lazy(StateT, runStateT, get, put, liftIO)
 import Data.Fix(Fix(..))
 import Data.Functor.Foldable(para)
@@ -60,7 +60,7 @@ linearize noHeuristics maxDepth program@Program{..} = do
   let progVars = collectVars program
   let lin = go maxDepth programBody [] (const pure)
   (res, (_, vars)) <- runStateT lin (M.empty, progVars)
-  return (map reverse res, vars)
+  return (res, vars)
   where
     prune'
       | noHeuristics = go
@@ -71,7 +71,6 @@ linearize noHeuristics maxDepth program@Program{..} = do
     prune d s p k = do
       (_, vs) <- get
       checked <- liftIO $ checkSAT vs (conjunctiveWLP noHeuristics p)
-      unless checked $ liftIO $ print p
       (if checked then go d s p k else return [])
 
     go :: Int -> Stmt -> LPath -> (Int -> [LPath] -> Linearlizer [LPath]) -> Linearlizer [LPath]
@@ -82,18 +81,18 @@ linearize noHeuristics maxDepth program@Program{..} = do
       Assert e -> k d [LAssert e : p]
       Assign v e -> k d [LAssign v e : p]
       AssignIndex v i e -> k d [LAssignIndex v i e : p]
-      If g t e -> do
-        t <- prune' (d - 1) t (LAssume g : p) k
-        f <- prune' (d - 1) e (LAssume (Not' g) : p) k
-        return $ ((<>) <$> t) <*> f
+      If g s1 s2 -> do
+        t <- prune' (d - 1) s1 (LAssume g : p) k
+        f <- prune' (d - 1) s2 (LAssume (Not' g) : p) k
+        return $ t <> f
       While g body -> go d (If' g (Seq' body s) Skip') p k
-      -- TODO Optimise it to O(1)
       Seq a b -> do
-        t <- go d b p k
         l <- go d a p k
-        return $ [ x <> y | x <- t, y <- l ]
+        r <- mapM (\lp -> go d b lp k) l
+        return $ concat r
       Let ds s -> do
         z <- go d s p k
         mapM (removeShadowing ds) z
 
-
+combine:: [LPath] -> [LPath] -> [LPath]
+combine l r = [ x <> y | x <- l, y <- r ]
