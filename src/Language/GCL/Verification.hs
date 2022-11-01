@@ -1,6 +1,6 @@
 module Language.GCL.Verification(verify) where
 
-import Control.Monad(when, zipWithM_, unless)
+import Control.Monad(when, unless)
 import Data.List(sort)
 import Data.Maybe(isJust)
 import Text.Printf(printf)
@@ -21,7 +21,6 @@ verify Opts{..} program@Program{..} = do
 
   tStart <- getCPUTime
   (paths, vars) <- linearize noHeuristics depth program
-  print paths
   let preds = wlp noHeuristics <$> paths
 
   results <- traverse (checkValid vars) preds
@@ -32,18 +31,20 @@ verify Opts{..} program@Program{..} = do
     total = length results
     invalid = length $ filter isJust results
 
-    showResult p = \case
-      Nothing -> putStrLn $ "✔️  " <> show p
-      Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
+    showResult (pth, p, res)= do
+      print pth
+      case res of
+        Nothing -> putStrLn $ "✔️  " <> show p
+        Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
 
   when dumpAST do
     print programBody
 
   when showStats do
-    zipWithM_ showResult preds results
+    mapM_ showResult $ zip3 paths preds results
 
     unless noHeuristics do
-      unpruned <- length <$> linearize True depth program
+      unpruned <- length . fst <$> linearize True depth program
       putStrLn $ "Pruned paths: " <> ratio (unpruned - total) unpruned
 
     putStrLn $ "Invalid paths: " <> ratio invalid total
