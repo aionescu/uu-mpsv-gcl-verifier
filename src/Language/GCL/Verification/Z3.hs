@@ -17,20 +17,12 @@ type Env = Map Id AST
 type Z = ReaderT Env Z3
 
 collectVars :: Program -> Map Id Type
-collectVars Program{..} = go $ Fix $ Let (programOutput : programInputs) programBody
+collectVars Program{..} = decls (programOutput : programInputs)
   where
     decls :: [Decl] -> Map Id Type
     decls ds = M.fromList $ ds >>= \case
       Decl i (Array t) -> [(i, t), ("#" <> i, Int)]
       Decl i t -> [(i, t)]
-
-    go :: Stmt -> Map Id Type
-    go = cata \case
-      If _ t e -> t <> e
-      While _ s -> s
-      Seq a b -> a <> b
-      Let ds s -> decls ds <> s
-      _ -> M.empty
 
 z3Vars :: Map Id Type -> Z3 Env
 z3Vars = M.traverseWithKey go
