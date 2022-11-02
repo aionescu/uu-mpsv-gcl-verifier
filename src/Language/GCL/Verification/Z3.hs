@@ -2,7 +2,6 @@ module Language.GCL.Verification.Z3 where
 
 import Control.Monad(join)
 import Control.Monad.Reader(ReaderT(..), asks, local)
-import Data.Fix(Fix(..))
 import Data.Function((&))
 import Data.Functor((<&>))
 import Data.Functor.Foldable(cata)
