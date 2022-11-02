@@ -40,7 +40,7 @@ linearize noHeuristics maxDepth program@Program{..} = do
   where
     prune'
       | noHeuristics = go
-      | otherwise = prune  
+      | otherwise = prune
 
     prune :: Int -> Stmt -> LPath -> (Int -> [LPath] -> Linearlizer [LPath]) -> Linearlizer [LPath]
     prune d _ p k| d < 0 = k d [p]

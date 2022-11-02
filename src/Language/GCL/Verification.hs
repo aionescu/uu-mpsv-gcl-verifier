@@ -31,8 +31,8 @@ verify Opts{..} program@Program{..} = do
     total = length results
     invalid = length $ filter isJust results
 
-    showResult (pth, p, res)= do
-      print pth
+    showResult (_path, p, res)= do
+      -- print path
       case res of
         Nothing -> putStrLn $ "✔️  " <> show p
         Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
