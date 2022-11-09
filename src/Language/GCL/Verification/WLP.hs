@@ -3,19 +3,19 @@ module Language.GCL.Verification.WLP(wlp, conjunctiveWLP) where
 import Data.Bool(bool)
 import Data.Fix(Fix(..))
 import Data.Foldable(foldl')
-import Data.Functor.Foldable(cata)
+import Data.Functor.Foldable(cata, para)
 
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers
 import Language.GCL.Verification.Simplification(simplify)
 
 subst :: Id -> Expr -> Pred -> Pred
-subst i e = cata \case
+subst i e = para \case
   Var v | i == v -> e
   Length v | i == v -> e
-  Forall v p | i == v -> Fix $ Forall v p
-  Exists v p | i == v -> Fix $ Exists v p
-  p -> Fix p
+  Forall v (p, _) | i == v -> Fix $ Forall v p
+  Exists v (p, _) | i == v -> Fix $ Exists v p
+  p -> Fix $ snd <$> p
 
 repBy :: Id -> Expr -> Expr -> Pred -> Pred
 repBy a i e = cata \case
