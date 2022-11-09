@@ -19,6 +19,6 @@ main = do
   code
     & parse opts
     >>= typeCheck
-    <&> verify opts
+    <&> (if dumpAST then (True <$) . print else verify opts)
     & either ((False <$) . T.putStrLn) id
     >>= exitWith . bool (ExitFailure 1) ExitSuccess

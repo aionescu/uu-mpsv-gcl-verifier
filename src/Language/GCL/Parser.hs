@@ -17,6 +17,7 @@ import Text.Megaparsec.Char.Lexer qualified as L
 import Language.GCL.Opts
 import Language.GCL.Syntax hiding (block, decls)
 import Language.GCL.Utils((...), showT)
+import Control.Applicative ((<**>))
 
 type Parser = Parsec Void Text
 
@@ -40,11 +41,12 @@ btwn = between `on` symbol
 
 reserved :: [Text]
 reserved =
-  [ "Int", "Bool"
+  [ "Int", "Bool", "Ref"
   , "True", "False"
   , "skip", "assume", "assert"
   , "if", "else", "while", "let"
   , "forall", "exists"
+  , "null", "val", "new"
   ]
 
 ident :: Parser Text
@@ -62,6 +64,7 @@ primType :: Parser Type
 primType =
   symbol "Int" $> Int
   <|> symbol "Bool" $> Bool
+  <|> symbol "Ref" $> Ref
 
 type' :: Parser Type
 type' = primType <|> Array <$> btwn "[" "]" primType
@@ -72,9 +75,10 @@ exprAtom =
   [ Fix . IntLit <$> lexeme L.decimal
   , Fix (BoolLit True) <$ symbol "True"
   , Fix (BoolLit False) <$ symbol "False"
+  , Fix Null <$ symbol "null"
   , try $ Fix ... Subscript <$> ident <*> btwn "[" "]" expr
-  , Fix . Var <$> ident
-  , Fix . Length <$> (char '#' *> ident)
+  , ident <**> option (Fix . Var) (try $ symbol "." *> symbol "val" $> Fix . GetVal)
+  , Fix . Length <$> (symbol "#" *> ident)
   , Fix ... Forall <$> (symbol "forall" *> ident <* symbol ".") <*> expr
   , Fix ... Exists <$> (symbol "exists" *> ident <* symbol ".") <*> expr
   , btwn "(" ")" expr
@@ -108,6 +112,8 @@ stmtSimple =
   , Fix . Assume <$> (symbol "assume" *> expr)
   , Fix . Assert <$> (symbol "assert" *> expr)
   , try $ (Fix .) ... AssignIndex <$> ident <*> (btwn "[" "]" expr <* symbol "=") <*> expr
+  , try $ Fix ... AssignVal <$> ident <* symbol "." <* symbol "val" <* symbol "=" <*> expr
+  , try $ Fix ... AssignNew <$> ident <* symbol "=" <* symbol "new" <*> expr
   , Fix ... Assign <$> (ident <* symbol "=") <*> expr
   ] <* symbol ";"
 

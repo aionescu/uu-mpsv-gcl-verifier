@@ -39,7 +39,9 @@ typeInferExpr :: Expr -> TC Type
 typeInferExpr = cata \case
   IntLit{} -> pure Int
   BoolLit{} -> pure Bool
+  Null -> pure Ref
   Var v -> lookupVar v
+  GetVal v -> check Ref (lookupVar v) $> Int
   Length v -> (lookupVar v >>= unArray) $> Int
   Op op a b
     | op `elem` [Add, Sub, Mul, Div] -> check Int a *> check Int b $> Int
@@ -71,6 +73,8 @@ typeCheckStmt = cata \case
   Assert e -> void $ typeCheckExpr Bool e
   Assign v e -> lookupVar v >>= (`typeCheckExpr` e)
   AssignIndex v i e -> typeCheckExpr Int i *> lookupVar v >>= unArray >>= (`typeCheckExpr` e)
+  AssignNew v e -> check Ref (lookupVar v) *> typeCheckExpr Int e
+  AssignVal v e -> check Ref (lookupVar v) *> typeCheckExpr Int e
   If g t e -> typeCheckExpr Bool g *> t *> e
   While g s -> typeCheckExpr Bool g *> s
   Seq a b -> a *> b

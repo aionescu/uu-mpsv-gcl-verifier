@@ -17,7 +17,7 @@ ratio :: Int -> Int -> String
 ratio a b = printf "%d/%d (%.2f%%)" a b $ fromIntegral  a * (100 :: Double) / fromIntegral b
 
 verify :: Opts -> Program -> IO Bool
-verify Opts{..} program@Program{..} = do
+verify Opts{..} program = do
 
   tStart <- getCPUTime
   (paths, vars) <- linearize noHeuristics depth program
@@ -36,9 +36,6 @@ verify Opts{..} program@Program{..} = do
       case res of
         Nothing -> putStrLn $ "✔️  " <> show p
         Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
-
-  when dumpAST do
-    print programBody
 
   when showStats do
     mapM_ showResult $ zip3 paths preds results

@@ -11,6 +11,7 @@ type Id = Text
 data Type
   = Int
   | Bool
+  | Ref
   | Array Type
   deriving Eq
 
@@ -68,7 +69,9 @@ associativity = \case
 data ExprF e
   = IntLit Int
   | BoolLit Bool
+  | Null
   | Var Id
+  | GetVal Id
   | Length Id
   | Op Op e e
   | Negate e
@@ -97,6 +100,8 @@ data StmtF e
   | Assert Expr
   | Assign Id Expr
   | AssignIndex Id Expr Expr
+  | AssignNew Id Expr
+  | AssignVal Id Expr
   | If Expr e e
   | While Expr e
   | Seq e e
@@ -129,6 +134,7 @@ instance Show Type where
   show = \case
     Int -> "Int"
     Bool -> "Bool"
+    Ref -> "Ref"
     Array a -> "[" <> show a <> "]"
 
 instance Show Op where
@@ -155,7 +161,9 @@ instance Show1 ExprF where
   liftShowsPrec showE _ p = \case
     IntLit i -> shows i
     BoolLit b -> shows b
+    Null -> showString "null"
     Var v -> showText v
+    GetVal v -> showText v . showString ".val"
     Length v -> showChar '#' . showText v
     Op o a b -> showParen (p > q) $ showE ql a . showChar ' ' . shows o . showChar ' ' . showE qr b
       where
@@ -192,6 +200,8 @@ instance {-# OVERLAPPING #-} Show Stmt where
     Assert e -> "assert " <> show e <> ";"
     Assign v e -> unpack v <> " = " <> show e <> ";"
     AssignIndex v i e -> unpack v <> "[" <> show i <> "] = " <> show e <> ";"
+    AssignNew v e -> unpack v <> " = new " <> show e <> ";"
+    AssignVal v e -> unpack v <> ".val = " <> show e <> ";"
     If e s (Fix Skip) -> "if " <> show e <> block s
     If e s s2 -> "if " <> show e <> block s <> " else" <> block s2
     While e s -> "while " <> show e <> block s

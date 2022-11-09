@@ -27,7 +27,7 @@
 		"keyword": {
 			"patterns": [{
 				"name": "keyword.control.gcl",
-				"match": "\\b(skip|assume|assert|if|else|while|let|forall|exists)\\b"
+				"match": "\\b(skip|assume|assert|if|else|while|let|forall|exists|null|val|new)\\b"
 			}]
     },
     "operator": {
@@ -45,7 +45,7 @@
     "type": {
       "patterns": [{
         "name": "support.function.brs",
-        "match": "\\b(Int|Bool)\\b"
+        "match": "\\b(Int|Bool|Ref)\\b"
       }]
     },
     "bool": {
