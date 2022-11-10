@@ -116,6 +116,8 @@ data LStmt
   | LAssert Expr
   | LAssign Id Expr
   | LAssignIndex Id Expr Expr
+  | LAssignNew Id Expr
+  | LAssignVal Id Expr
   deriving Eq
 
 -- Linear path
@@ -214,6 +216,8 @@ instance Show LStmt where
     LAssert e -> Assert e
     LAssign v e -> Assign v e
     LAssignIndex v i e -> AssignIndex v i e
+    LAssignNew v e -> AssignNew v e
+    LAssignVal v e -> AssignVal v e
 
   showList l s = (show =<< l) <> s
 

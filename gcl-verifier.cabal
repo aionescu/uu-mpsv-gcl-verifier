@@ -1,20 +1,17 @@
 cabal-version: 3.6
 
-name: gcl
+name: gcl-verifier
 version: 0.0.0.0
-synopsis: Implementation of the Guarded Command Language
-description: Please see the README on GitHub at <https://github.com/aionescu/gcl#readme>
-homepage: https://github.com/aionescu/gcl#readme
-bug-reports: https://github.com/aionescu/gcl/issues
+synopsis: WLP-based GCL verifier
+description: Please see the README on GitHub at <https://github.com/aionescu/gcl-verifier#readme>
+homepage: https://github.com/aionescu/gcl-verifier#readme
+bug-reports: https://github.com/aionescu/gcl-verifier/issues
 license: GPL-3.0-only
 license-file: LICENSE.txt
-maintainer: alxi.2001@gmail.com
-copyright: Copyright (C) 2022 Alex Ionescu
-category: Compilers/Interpreters, Language
 build-type: Simple
 extra-source-files: README.md
 
-executable gcl
+executable gcl-verifier
   hs-source-dirs: src
   main-is: Main.hs
 

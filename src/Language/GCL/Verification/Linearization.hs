@@ -11,6 +11,7 @@ import Language.GCL.Syntax.Helpers
 import Language.GCL.Utils
 import Language.GCL.Verification.WLP
 import Language.GCL.Verification.Z3
+import Control.Monad (join)
 
 type Collected = (Map Id Int, Map Id Id, Map Id Type)
 type Linearizer a = StateT Collected IO a
@@ -52,19 +53,25 @@ linearize noHeuristics maxDepth program@Program{..} = do
     go :: Int -> Stmt -> LPath -> (Int -> [LPath] -> Linearizer [LPath]) -> Linearizer [LPath]
     go d _ p k | d < 0 = k d [p]
     go d s p k = case unFix s of
-      Skip -> k d [p]
+      Skip -> k d []
       Assume e -> do
         u <- unshadow $ LAssume e
-        k d [u : p]
+        k (d - 1) [u : p]
       Assert e -> do
         u <- unshadow $ LAssert e
-        k d [u : p]
+        k (d - 1) [u : p]
       Assign v e -> do
         u <- unshadow $ LAssign v e
-        k d [u : p]
+        k (d - 1) [u : p]
       AssignIndex v i e -> do
         u <- unshadow $ LAssignIndex v i e
-        k d [u : p]
+        k (d - 1) [u : p]
+      AssignNew v e -> do
+        u <- unshadow $ LAssignNew v e
+        k (d - 1) [u : p]
+      AssignVal v e -> do
+        u <- unshadow $ LAssignVal v e
+        k (d - 1) [u : p]
       If g s1 s2 -> do
         u1 <- unshadow $ LAssume g
         u2 <- unshadow $ LAssume (Not' g)
@@ -72,10 +79,7 @@ linearize noHeuristics maxDepth program@Program{..} = do
         f <- prune' (d - 1) s2 (u2 : p) k
         pure $ t <> f
       While g body -> go d (If' g (Seq' body s) Skip') p k
-      Seq a b -> do
-        l <- go d a p k
-        r <- mapM (\lp -> go d b lp k) l
-        pure $ concat r
+      Seq a b -> go d a p \d ps -> join <$> traverse (\p -> go d b p k) ps
       Let ds s -> do
         prev <- get
         addShadowed ds
@@ -86,6 +90,7 @@ linearize noHeuristics maxDepth program@Program{..} = do
 substId :: Id -> Id -> Pred -> Pred
 substId id id' = para \case
   Var v | id == v -> Fix $ Var id'
+  GetVal v | id == v -> Fix $ GetVal id'
   Length v | id == v -> Fix $ Length id'
   Forall v (p, _) | id == v -> Fix $ Forall v p
   Exists v (p, _) | id == v -> Fix $ Exists v p
@@ -102,3 +107,5 @@ unshadow st = do
       LAssert e -> LAssert $ substId id id' e
       LAssign i e -> LAssign (if i == id then id' else i) $ substId id id' e
       LAssignIndex i e1 e2 -> LAssignIndex (if i == id then id' else i) (substId id id' e1) (substId id id' e2)
+      LAssignNew i e -> LAssignNew (if i == id then id' else i) $ substId id id' e
+      LAssignVal i e -> LAssignVal (if i == id then id' else i) $ substId id id' e

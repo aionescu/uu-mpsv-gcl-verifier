@@ -1,0 +1,6 @@
+pointers(p: Ref, q: Ref) -> x: Int {
+  assume p.val == 2;
+  q = p;
+
+  assert q.val == 2;
+}

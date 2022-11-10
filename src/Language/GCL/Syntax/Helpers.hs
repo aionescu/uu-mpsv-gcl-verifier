@@ -26,11 +26,23 @@ pattern a :|| b = Fix (Op Or a b)
 pattern (:=>) :: Expr -> Expr -> Expr
 pattern a :=> b = Fix (Op Implies a b)
 
+pattern (:==) :: Expr -> Expr -> Expr
+pattern a :== b = Fix (Op Eq a b)
+
+pattern (:!=) :: Expr -> Expr -> Expr
+pattern a :!= b = Fix (Op Neq a b)
+
+pattern Null' :: Expr
+pattern Null' = Fix Null
+
 pattern Not' :: Expr -> Expr
 pattern Not' a = Fix (Not a)
 
-pattern IfEq' :: Expr -> Expr -> Expr -> Expr -> Expr
-pattern IfEq' a b e1 e2 = Fix (Conditional (Fix (Op Eq a b)) e1 e2)
+pattern Var' :: Id -> Expr
+pattern Var' a = Fix (Var a)
+
+pattern Conditional' :: Expr -> Expr -> Expr -> Expr
+pattern Conditional' g t e = Fix (Conditional g t e)
 
 pattern Assert' :: Expr -> Stmt
 pattern Assert' a = Fix (Assert a)

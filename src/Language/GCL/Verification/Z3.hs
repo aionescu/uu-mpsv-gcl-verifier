@@ -29,6 +29,7 @@ z3Vars = M.traverseWithKey go
     go :: Id -> Type -> Z3 AST
     go i Int = mkFreshIntVar $ T.unpack i
     go i Bool = mkFreshBoolVar $ T.unpack i
+    go i Ref = mkFreshIntVar $ T.unpack i
     go _ (Array ty) = case ty of
       Int -> mkInteger 0
       Bool -> mkBool False
@@ -55,7 +56,9 @@ z3Expr :: Expr -> Z AST
 z3Expr = cata \case
   IntLit i -> mkInteger $ toInteger i
   BoolLit b -> mkBool b
+  Null -> mkInteger 0
   Var v -> asks (M.! v)
+  GetVal v -> asks (M.! v)
   Length v -> asks (M.! ("#" <> v))
   Op o a b -> join $ z3Op o <$> a <*> b
   Negate a -> mkUnaryMinus =<< a

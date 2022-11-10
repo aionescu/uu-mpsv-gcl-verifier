@@ -1,4 +1,5 @@
-refMin(N: Int,a: [Int], x: Ref, u: Ref) -> m: Ref {
+refMin(N: Int, a: [Int], x: Ref, u: Ref) -> m: Ref {
+  N = 5;
   assume #a > 0 && #a == N && x != null && forall i. 0 <= i && i < #a => a[i] > 0;
 
   let k: Int {

@@ -39,11 +39,6 @@ verify Opts{..} program = do
 
   when showStats do
     mapM_ showResult $ zip3 paths preds results
-
-    unless noHeuristics do
-      unpruned <- length . fst <$> linearize True depth program
-      putStrLn $ "Pruned paths: " <> ratio (unpruned - total) unpruned
-
     putStrLn $ "Invalid paths: " <> ratio invalid total
 
     let

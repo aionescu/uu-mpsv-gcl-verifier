@@ -69,10 +69,10 @@ simplify = cata go
         | Gt <- o -> B $ a > b
         | Gte <- o -> B $ a >= b
 
-      Op o (Fix (Var a)) (Fix (Var a'))
+      Op o (Var' a) (Var' a')
         | a == a' && o `elem` [Eq, Lte, Gte] -> T
         | a == a' && o `elem` [Neq, Lt, Gt] -> F
-        | a == a', Add <- o -> go $ Op Mul (Fix $Var a) $ I 2
+        | a == a', Add <- o -> go $ Op Mul (Fix $ Var a) $ I 2
         | a == a', Sub <- o -> I 0
         | a == a', Div <- o -> I 1
 
