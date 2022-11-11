@@ -31,8 +31,8 @@ z3Env m = (<>) <$> vars m <*> lengthVars m
       Int -> mkFreshIntVar $ T.unpack i
       Bool -> mkFreshBoolVar $ T.unpack i
       Ref -> mkFreshIntVar $ T.unpack i
-      Array Int -> mkInteger 0
-      Array Bool -> mkBool False
+      Array Int -> mkFreshIntVar $ T.unpack i
+      Array Bool -> mkFreshBoolVar $ T.unpack i
       Array{} -> error "z3Env: Nested arrays are not supported"
 
 z3Op :: Op -> AST -> AST -> Z AST
