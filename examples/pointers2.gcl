@@ -1,0 +1,14 @@
+refMin(N: Int, a: [Int], x: Ref, u: Ref) -> m: Ref {
+  N = 1;
+  assume #a > 0 && #a == N && x != null && forall i. 0 <= i && i < #a => a[i] > 0;
+
+  u = new a[0];
+  m = u;
+  if u.val < m.val {
+      m = u;
+  } else {
+    u.val = u.val + 1;
+  }
+  
+  assert m.val <= a[0];
+}
