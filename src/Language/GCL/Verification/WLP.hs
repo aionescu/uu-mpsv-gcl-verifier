@@ -42,7 +42,7 @@ wlp (bool simplify id -> simplify') = simplify' . foldr go T
       LAssert e -> (e :&&)
       LAssign v e -> subst v e
       LAssignIndex v i e -> repBy v i e
-      LAssignNew v e -> substNew v e
+      LAssignNew v e ->  (\p -> Var' v :!= Null' :=> substNew v e p)
       LAssignVal v e -> substVal v e
 
 conjunctiveWLP :: Bool -> LPath -> Pred
