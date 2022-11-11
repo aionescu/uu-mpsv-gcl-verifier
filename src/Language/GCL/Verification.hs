@@ -1,6 +1,6 @@
 module Language.GCL.Verification(verify) where
 
-import Control.Monad(when, unless)
+import Control.Monad(when, unless, zipWithM_)
 import Data.List(sort)
 import Data.Maybe(isJust)
 import Text.Printf(printf)
@@ -20,10 +20,10 @@ verify :: Opts -> Program -> IO Bool
 verify Opts{..} program = do
 
   tStart <- getCPUTime
-  (paths, vars) <- linearize noHeuristics depth program
-  let preds = wlp noHeuristics <$> paths
+  let paths = linearize noHeuristics depth program
+  let preds = (\(vars, p) -> (vars, p, wlp noHeuristics p)) <$> paths
 
-  results <- traverse (checkValid vars) preds
+  results <- traverse (\(vars, _, pred) -> checkValid vars pred) preds
 
   tEnd <- getCPUTime
 
@@ -31,18 +31,16 @@ verify Opts{..} program = do
     total = length results
     invalid = length $ filter isJust results
 
-    showResult (_path, p, res)= do
-      -- print path
-      case res of
-        Nothing -> putStrLn $ "✔️  " <> show p
-        Just m -> putStrLn $ "❌ " <> show p <> "\n" <> m
+    showResult (_, _, pred) = \case
+      Nothing -> putStrLn $ "✔️  " <> show pred
+      Just m -> putStrLn $ "❌ " <> show pred <> "\n" <> m
 
   when showStats do
-    mapM_ showResult $ zip3 paths preds results
+    zipWithM_ showResult preds results
     putStrLn $ "Invalid paths: " <> ratio invalid total
 
     let
-      sizes = atoms <$> preds
+      sizes = (\(_, _, pred) -> atoms pred) <$> preds
       avg :: Double = fromIntegral (sum sizes) / fromIntegral (length sizes)
       median = sort sizes !! (length sizes `quot` 2)
 

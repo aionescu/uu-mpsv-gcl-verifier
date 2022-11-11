@@ -8,6 +8,7 @@ import Data.Functor.Foldable(cata)
 import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
+import System.IO.Unsafe(unsafePerformIO)
 import Z3.Monad hiding(Opts, local, simplify)
 
 import Language.GCL.Syntax
@@ -15,25 +16,24 @@ import Language.GCL.Syntax
 type Env = Map Id AST
 type Z = ReaderT Env Z3
 
-collectVars :: Program -> Map Id Type
-collectVars Program{..} = decls (programOutput : programInputs)
+z3Env :: Map Id Type -> Z3 Env
+z3Env m = (<>) <$> vars m <*> lengthVars m
   where
-    decls :: [Decl] -> Map Id Type
-    decls ds = M.fromList $ ds >>= \case
-      Decl i (Array t) -> [(i, t), ("#" <> i, Int)]
-      Decl i t -> [(i, t)]
+    lengthVars :: Map Id Type -> Z3 Env
+    lengthVars =
+      fmap M.fromList
+      . traverse (\i -> ("#" <> i,) <$> mkFreshIntVar ('#' : T.unpack i))
+      . M.keys
+      . M.filter (\case Array{} -> True; _ -> False)
 
-z3Vars :: Map Id Type -> Z3 Env
-z3Vars = M.traverseWithKey go
-  where
-    go :: Id -> Type -> Z3 AST
-    go i Int = mkFreshIntVar $ T.unpack i
-    go i Bool = mkFreshBoolVar $ T.unpack i
-    go i Ref = mkFreshIntVar $ T.unpack i
-    go _ (Array ty) = case ty of
-      Int -> mkInteger 0
-      Bool -> mkBool False
-      _ -> error "z3Vars: Nested arrays are not supported"
+    vars :: Map Id Type -> Z3 Env
+    vars = M.traverseWithKey \i -> \case
+      Int -> mkFreshIntVar $ T.unpack i
+      Bool -> mkFreshBoolVar $ T.unpack i
+      Ref -> mkFreshIntVar $ T.unpack i
+      Array Int -> mkInteger 0
+      Array Bool -> mkBool False
+      Array{} -> error "z3Env: Nested arrays are not supported"
 
 z3Op :: Op -> AST -> AST -> Z AST
 z3Op op a b =
@@ -76,14 +76,22 @@ z3Expr = cata \case
 
 checkValid :: Map Id Type -> Pred -> IO (Maybe String)
 checkValid v p =
-  (z3Vars v >>= runReaderT (z3Expr p) >>= mkNot >>= assert)
+  (z3Env v >>= runReaderT (z3Expr p) >>= mkNot >>= assert)
   *> withModel modelToString
   <&> snd
   & evalZ3
 
 checkSAT :: Map Id Type -> Pred -> IO Bool
 checkSAT v p =
-  (z3Vars v >>= runReaderT (z3Expr p) >>= assert)
+  (z3Env v >>= runReaderT (z3Expr p) >>= assert)
   *> check
   <&> (== Sat)
   & evalZ3
+
+unsafeCheckValid :: Map Id Type -> Pred -> Maybe String
+unsafeCheckValid v p = unsafePerformIO $ checkValid v p
+{-# NOINLINE unsafeCheckValid #-}
+
+unsafeCheckSAT :: Map Id Type -> Pred -> Bool
+unsafeCheckSAT v p = unsafePerformIO $ checkSAT v p
+{-# NOINLINE unsafeCheckSAT #-}

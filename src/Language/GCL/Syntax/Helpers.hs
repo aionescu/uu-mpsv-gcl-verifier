@@ -65,11 +65,17 @@ pattern Seq' a b = Fix (Seq a b)
 pattern Let' :: [Decl] -> Stmt -> Stmt
 pattern Let' dc st = Fix (Let dc st)
 
+pattern Assign' :: Id -> Expr -> Stmt
+pattern Assign' i e = Fix (Assign i e)
+
 pattern AssignIndex' :: Id -> Expr -> Expr -> Stmt
 pattern AssignIndex' i e e2 = Fix (AssignIndex i e e2)
 
-pattern Assign' :: Id -> Expr -> Stmt
-pattern Assign' i e = Fix (Assign i e)
+pattern AssignNew' :: Id -> Expr -> Stmt
+pattern AssignNew' i e = Fix (AssignNew i e)
+
+pattern AssignVal' :: Id -> Expr -> Stmt
+pattern AssignVal' i e = Fix (AssignVal i e)
 
 atoms :: Pred -> Int
 atoms = cata \case
