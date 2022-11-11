@@ -8,6 +8,8 @@ data Opts =
   , noHeuristics :: Bool
   , showStats :: Bool
   , dumpAST :: Bool
+  , showPaths :: Bool
+  , showPreds :: Bool
   , path :: FilePath
   }
 
@@ -18,6 +20,8 @@ optsParser =
   <*> switch (long "no-heuristics" <> help "Disable feasiblity heuristics & frontend simplifier")
   <*> switch (long "show-stats" <> help "Show verification statistics")
   <*> switch (long "dump-ast" <> help "Show AST after parsing")
+  <*> switch (long "show-paths" <> help "Show paths and results")
+  <*> switch (long "show-preds" <> help "Show preds and results")
   <*> strArgument (metavar "PATH" <> help "The source file to verify")
 
 fullParser :: ParserInfo Opts

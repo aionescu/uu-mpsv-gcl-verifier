@@ -1,6 +1,6 @@
 module Language.GCL.Verification(verify) where
 
-import Control.Monad(when, unless, zipWithM_)
+import Control.Monad(when, unless)
 import Data.List(sort)
 import Data.Maybe(isJust)
 import Text.Printf(printf)
@@ -31,12 +31,17 @@ verify Opts{..} program = do
     total = length results
     invalid = length $ filter isJust results
 
-    showResult (_, _, pred) = \case
-      Nothing -> putStrLn $ "✔️  " <> show pred
-      Just m -> putStrLn $ "❌ " <> show pred <> "\n" <> m
+    showResult ((_, p, pr), result) = do
+      when showPaths (print p) 
+      when showPreds (print pr)
+      case result of
+        Nothing -> putStrLn "✔️  "
+        Just m -> putStrLn $ "❌ " <> "\n" <> m
+
+  when (showPaths || showPreds) do
+    mapM_ showResult $ zip preds results
 
   when showStats do
-    zipWithM_ showResult preds results
     putStrLn $ "Invalid paths: " <> ratio invalid total
 
     let
@@ -49,5 +54,6 @@ verify Opts{..} program = do
 
     let time :: Double = fromIntegral (tEnd - tStart) / 1e12
     printf "Time elapsed: %.3fs\n" time
+    printf ""
 
   pure $ invalid == 0
