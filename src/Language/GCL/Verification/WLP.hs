@@ -33,26 +33,32 @@ substVal (Var' -> i) e = cata \case
   z@(GetVal (Var' -> v)) -> Conditional' ((i :!= Null') :&& (i :== v)) e $ Fix z
   z -> Fix z
 
+repAddress :: Id -> Int -> Pred -> Pred
+repAddress v (I -> add) = subst v add
+
 wlp :: Bool -> LPath -> Pred
-wlp (bool simplify id -> simplify') = simplify' . foldr go T
+wlp (bool simplify id -> simplify') path = simplify' . fst $ foldr go (T, 1) path
   where
-    go :: LStmt -> Pred -> Pred
-    go = \case
-      LAssume e -> (e :=>)
-      LAssert e -> (e :&&)
-      LAssign v e -> subst v e
-      LAssignIndex v i e -> repBy v i e
-      LAssignNew v e ->  (\p -> Var' v :!= Null' :=> substNew v e p)
-      LAssignVal v e -> substVal v e
+    go :: LStmt -> (Pred, Int) -> (Pred, Int)
+    go p (q, idx) = case p of
+      LAssume e -> (e :=> q, idx)
+      LAssert e -> (e :&& q, idx)
+      LAssign v e -> (subst v e q, idx)
+      LAssignIndex v i e -> (repBy v i e q, idx)
+      LAssignNew v e ->  (Var' v :!= Null' :=> repAddress v idx (substNew v e q), idx + 1)
+      LAssignVal v e -> (substVal v e q, idx)
+
 
 conjunctiveWLP :: Bool -> LPath -> Pred
-conjunctiveWLP (bool simplify id -> simplify') = simplify' . foldl' go T
-  where
-    go :: Pred -> LStmt -> Pred
-    go q = \case
-      LAssume e -> e :&& q
-      LAssert{} -> q
-      LAssign v e -> subst v e q
-      LAssignIndex v i e -> repBy v i e q
-      LAssignNew v e -> substNew v e q
-      LAssignVal v e -> substVal v e q
+conjunctiveWLP (bool simplify id -> simplify') path = simplify' . fst $ foldl' go (T, 1) path
+    where
+      go :: (Pred, Int) -> LStmt -> (Pred, Int)
+      go (q, idx) = \case
+          LAssume e -> (e :&& q, idx)
+          LAssert{} -> (q, idx)
+          LAssign v e -> (subst v e q, idx)
+          LAssignIndex v i e -> (repBy v i e q, idx)
+          LAssignNew v e -> (Var' v :!= Null' :=> repAddress v idx (substNew v e q), idx + 1)
+          LAssignVal v e -> (substVal v e q, idx)
+
+
