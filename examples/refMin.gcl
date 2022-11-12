@@ -9,14 +9,13 @@ refMin(N: Int, a: [Int], x: Ref, u: Ref) -> m: Ref {
 
       if k == 0 {
         m = u;
-      }
-
-      if u.val < m.val {
-        m = u;
       } else {
-        u.val = u.val + 1;
+        if u.val < m.val {
+          m = u;
+        } else {
+          u.val = u.val + 1;
+        }
       }
-
       if m != null {
         x.val = m.val + 1;
       }
@@ -24,6 +23,5 @@ refMin(N: Int, a: [Int], x: Ref, u: Ref) -> m: Ref {
       k = k + 1;
     }
   }
-
   assert forall i. 0 <= i && i < #a => m.val <= a[i];
 }
