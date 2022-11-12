@@ -40,7 +40,7 @@ substMapStmt m = para \case
 
 linearizeStmt :: Heuristics -> Int -> [Decl] -> Stmt -> IO [(Map Id Type, LPath)]
 linearizeStmt Heuristics{..} maxDepth decls s =
-  ((\(_, _, _, tys, p) -> (tys, p)) <$>) <$> go maxDepth 0 M.empty initialTys [] s
+  ((\(_, _, _, tys, p) -> (tys, p)) <$>) <$> go maxDepth 10 M.empty initialTys [] s
   where
     initialTys = M.fromList $ (\Decl{..} -> (declName, declType)) <$> decls
 

@@ -8,21 +8,26 @@ import System.CPUTime(getCPUTime)
 
 import Language.GCL.Opts
 import Language.GCL.Syntax
-import Language.GCL.Syntax.Helpers(atoms)
+import Language.GCL.Syntax.Helpers
 import Language.GCL.Verification.Linearization(linearize)
 import Language.GCL.Verification.WLP(wlp)
 import Language.GCL.Verification.Z3
 import Language.GCL.Utils(ratio)
 
 
+addDistinctPre :: Program -> LPath
+addDistinctPre Program{..} = map (\Decl{..} -> LAssume ((I 0 :>= Var' declName) :&& (Var' declName :< I 10))) refs
+  where refs = filter (\Decl{..} -> declType == Ref) (programOutput : programInputs)
+
 verify :: Opts -> Program -> IO Bool
 verify opts@Opts{..} program = do
   tStart <- getCPUTime
   paths <- linearize opts program
-  let preds = (\(vars, p) -> (vars, p, wlp noSimplify p)) <$> paths
+  let precond = addDistinctPre program
+  let paths' = map (\(m, p) -> (m, p <> precond)) paths
+  let preds = (\(vars, p) -> (vars, p, wlp noSimplify p)) <$> paths'
 
   results <- traverse (\(vars, _, pred) -> checkValid vars pred) preds
-
   tEnd <- getCPUTime
 
   let
