@@ -1,4 +1,4 @@
-module Language.GCL.Verification.WLP(wlp, conjunctiveWLP) where
+module Language.GCL.Verification.WLP(wlp, conjunctiveWLP, replaceN) where
 
 import Data.Bool(bool)
 import Data.Fix(Fix(..))
@@ -18,11 +18,6 @@ subst i e = para \case
   Exists v (p, _) | i == v -> Fix $ Exists v p
   p -> Fix $ snd <$> p
 
-repBy :: Id -> Expr -> Expr -> Pred -> Pred
-repBy a i e = cata \case
-  z@(Subscript a' i') | a == a' -> Conditional' (i :== i') e $ Fix z
-  z -> Fix z
-
 substNew :: Id -> Expr -> Pred -> Pred
 substNew i e = cata \case
   GetVal i' | i == i' -> e
@@ -30,7 +25,7 @@ substNew i e = cata \case
 
 substVal :: Id -> Expr -> Pred -> Pred
 substVal (Var' -> i) e = cata \case
-  z@(GetVal (Var' -> v)) -> Conditional' ((i :!= Null') :&& (i :== v)) e $ Fix z
+  z@(GetVal (Var' -> v)) -> Cond' ((i :!= Null') :&& (i :== v)) e $ Fix z
   z -> Fix z
 
 repAddress :: Id -> Int -> Pred -> Pred
@@ -44,21 +39,25 @@ wlp (bool simplify id -> simplify') path = simplify' . fst $ foldr go (T, 1) pat
       LAssume e -> (e :=> q, idx)
       LAssert e -> (e :&& q, idx)
       LAssign v e -> (subst v e q, idx)
-      LAssignIndex v i e -> (repBy v i e q, idx)
+      LAssignIndex v i e -> (subst v (RepBy' (Var' v) i e) q, idx)
       LAssignNew v e ->  (Var' v :!= Null' :=> repAddress v idx (substNew v e q), idx + 1)
       LAssignVal v e -> (substVal v e q, idx)
 
-
 conjunctiveWLP :: Bool -> LPath -> Pred
 conjunctiveWLP (bool simplify id -> simplify') path = simplify' . fst $ foldl' go (T, 1) path
-    where
-      go :: (Pred, Int) -> LStmt -> (Pred, Int)
-      go (q, idx) = \case
-          LAssume e -> (e :&& q, idx)
-          LAssert{} -> (q, idx)
-          LAssign v e -> (subst v e q, idx)
-          LAssignIndex v i e -> (repBy v i e q, idx)
-          LAssignNew v e -> (Var' v :!= Null' :=> repAddress v idx (substNew v e q), idx + 1)
-          LAssignVal v e -> (substVal v e q, idx)
+  where
+    go :: (Pred, Int) -> LStmt -> (Pred, Int)
+    go (q, idx) = \case
+      LAssume e -> (e :&& q, idx)
+      LAssert{} -> (q, idx)
+      LAssign v e -> (subst v e q, idx)
+      LAssignIndex v i e -> (subst v (RepBy' (Var' v) i e) q, idx)
+      LAssignNew v e -> (Var' v :!= Null' :=> repAddress v idx (substNew v e q), idx + 1)
+      LAssignVal v e -> (substVal v e q, idx)
 
-
+-- This function shouldn't be in this module, but it uses `subst`,
+-- and this was the easiest way to avoid dependency cycles.
+replaceN :: Maybe Int -> Program -> Program
+replaceN (Just n) p@Program{..}
+  | Decl "N" Int `elem` programInputs = p { programBody = mapExprs (subst "N" $ I n) programBody }
+replaceN _ p = p

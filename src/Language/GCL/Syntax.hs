@@ -13,7 +13,7 @@ data Type
   | Bool
   | Ref
   | Array Type
-  deriving Eq
+  deriving (Eq, Ord)
 
 data Op
   = Add
@@ -76,10 +76,11 @@ data ExprF e
   | Op Op e e
   | Negate e
   | Not e
-  | Subscript Id e
+  | Subscript e e
   | Forall Id e
   | Exists Id e
-  | Conditional e e e
+  | Cond e e e
+  | RepBy e e e
   deriving (Functor, Foldable, Traversable, Eq)
 
 instance {-# OVERLAPPING #-} Eq Expr where
@@ -93,6 +94,7 @@ data Decl = Decl
   { declName :: Id,
     declType :: Type
   }
+  deriving Eq
 
 data StmtF e
   = Skip
@@ -176,10 +178,11 @@ instance Show1 ExprF where
           N -> (q + 1, q + 1)
     Negate e -> showChar '-' . showE 9 e
     Not e -> showChar '!' . showE 9 e
-    Subscript v e -> showText v . showChar '[' . showE 0 e . showChar ']'
+    Subscript v e -> showE 0 v . showChar '[' . showE 0 e . showChar ']'
     Forall v e -> showParen (p > 1) $ showString "forall " . showText v . showString ". " . showE 0 e
     Exists v e -> showParen (p > 1) $ showString "exists " . showText v . showString ". " . showE 0 e
-    Conditional c e1 e2 -> showText "(" . showE 0 c . showText " -> " . showE 0 e1 . showText "|" . showE 0 e2 . showText ")"
+    Cond c e1 e2 -> showString "(" . showE 0 c . showString " -> " . showE 0 e1 . showString "|" . showE 0 e2 . showString ")"
+    RepBy v i e -> showE 0 v . showString "(" . showE 0 i . showString " repby " . showE 0 e . showString ")"
 
 instance {-# OVERLAPPING #-} Show Expr where
   showsPrec :: Int -> Expr -> ShowS
@@ -219,7 +222,7 @@ instance Show LStmt where
     LAssignNew v e -> AssignNew v e
     LAssignVal v e -> AssignVal v e
 
-  showList l s = (show =<< l) <> s
+  showList l s = unwords (show <$> l) <> s
 
 instance Show Program where
   show (Program n i o b) = unpack n <> "(" <> decls i <> ") -> " <> show o <> block b

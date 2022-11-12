@@ -41,8 +41,11 @@ pattern Not' a = Fix (Not a)
 pattern Var' :: Id -> Expr
 pattern Var' a = Fix (Var a)
 
-pattern Conditional' :: Expr -> Expr -> Expr -> Expr
-pattern Conditional' g t e = Fix (Conditional g t e)
+pattern Cond' :: Expr -> Expr -> Expr -> Expr
+pattern Cond' g t e = Fix (Cond g t e)
+
+pattern RepBy' :: Expr -> Expr -> Expr -> Expr
+pattern RepBy' v i e = Fix (RepBy v i e)
 
 pattern Assert' :: Expr -> Stmt
 pattern Assert' a = Fix (Assert a)
@@ -84,5 +87,17 @@ atoms = cata \case
   Not b -> b
   Forall _ b -> b
   Exists _ b -> b
-  Conditional g _ _ -> g
+  Cond g _ _ -> g
   _ -> 1
+
+mapExprs :: (Expr -> Expr) -> Stmt -> Stmt
+mapExprs f = cata \case
+  Assume e -> Assume' $ f e
+  Assert e -> Assert' $ f e
+  Assign v e -> Assign' v $ f e
+  AssignIndex v i e -> AssignIndex' v (f i) $ f e
+  AssignNew v e -> AssignNew' v $ f e
+  AssignVal v e -> AssignVal' v $ f e
+  If g t e -> If' (f g) t e
+  While g s -> While' (f g) s
+  s -> Fix s

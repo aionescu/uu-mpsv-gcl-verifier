@@ -1,6 +1,5 @@
 -- Correct
 memberOf(N: Int, x: Int, a: [Int]) -> found: Bool {
-  N = 5;
   assume #a >= N && #a >=0 && exists k. 0 <= k && k < #a && a[k] == x;
 
   let k: Int {

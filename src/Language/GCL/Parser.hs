@@ -76,7 +76,7 @@ exprAtom =
   , Fix (BoolLit True) <$ symbol "True"
   , Fix (BoolLit False) <$ symbol "False"
   , Fix Null <$ symbol "null"
-  , try $ Fix ... Subscript <$> ident <*> btwn "[" "]" expr
+  , try $ Fix ... Subscript <$> (Fix . Var <$> ident) <*> btwn "[" "]" expr
   , ident <**> option (Fix . Var) (try $ symbol "." *> symbol "val" $> Fix . GetVal)
   , Fix . Length <$> (symbol "#" *> ident)
   , Fix ... Forall <$> (symbol "forall" *> ident <* symbol ".") <*> expr

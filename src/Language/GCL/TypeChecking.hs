@@ -51,10 +51,11 @@ typeInferExpr = cata \case
     | otherwise -> error "typeInferExpr: Unreachable"
   Negate e -> check Int e $> Int
   Not e -> check Bool e $> Bool
-  Subscript v e -> check Int e *> lookupVar v >>= unArray
+  Subscript v e -> check Int e *> v >>= unArray
   Forall v e -> with [Decl v Int] $ check Bool e $> Bool
   Exists v e -> with [Decl v Int] $ check Bool e $> Bool
-  Conditional g t e -> check Bool g *> t >>= (`check` e)
+  Cond g t e -> check Bool g *> t >>= (`check` e)
+  RepBy v i e -> check Int i *> v >>= \a -> (unArray a >>= (`check` e)) $> a
 
 typeCheckExpr :: Type -> Expr -> TC ()
 typeCheckExpr t e = void $ check t $ typeInferExpr e

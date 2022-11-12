@@ -16,8 +16,18 @@ import Language.GCL.Syntax
 type Env = Map Id AST
 type Z = ReaderT Env Z3
 
+mkArraySorts :: Z3 (Map Type Sort)
+mkArraySorts = do
+  int <- mkIntSort
+  bool <- mkBoolSort
+
+  M.fromList <$> sequenceA
+    [ (Int,) <$> mkArraySort int int
+    , (Bool,) <$> mkArraySort int bool
+    ]
+
 z3Env :: Map Id Type -> Z3 Env
-z3Env m = (<>) <$> vars m <*> lengthVars m
+z3Env m = mkArraySorts >>= \arr -> (<>) <$> vars arr m <*> lengthVars m
   where
     lengthVars :: Map Id Type -> Z3 Env
     lengthVars =
@@ -26,14 +36,13 @@ z3Env m = (<>) <$> vars m <*> lengthVars m
       . M.keys
       . M.filter (\case Array{} -> True; _ -> False)
 
-    vars :: Map Id Type -> Z3 Env
-    vars = M.traverseWithKey \i -> \case
+    vars :: Map Type Sort -> Map Id Type -> Z3 Env
+    vars arr = M.traverseWithKey \i -> \case
       Int -> mkFreshIntVar $ T.unpack i
       Bool -> mkFreshBoolVar $ T.unpack i
       Ref -> mkFreshIntVar $ T.unpack i
-      Array Int -> mkFreshIntVar $ T.unpack i
-      Array Bool -> mkFreshBoolVar $ T.unpack i
-      Array{} -> error "z3Env: Nested arrays are not supported"
+      Array Array{} -> error "z3Env: Nested arrays are not supported"
+      Array t -> mkFreshVar (T.unpack i) $ arr M.! t
 
 z3Op :: Op -> AST -> AST -> Z AST
 z3Op op a b =
@@ -63,7 +72,7 @@ z3Expr = cata \case
   Op o a b -> join $ z3Op o <$> a <*> b
   Negate a -> mkUnaryMinus =<< a
   Not a -> mkNot =<< a
-  Subscript a _ -> asks (M.! a)
+  Subscript a i -> join $ mkSelect <$> a <*> i
   Forall i e -> do
     var <- mkFreshIntVar $ T.unpack i
     app <- toApp var
@@ -72,7 +81,8 @@ z3Expr = cata \case
     var <- mkFreshIntVar $ T.unpack i
     app <- toApp var
     mkExistsConst [] [app] =<< local (M.insert i var) e
-  Conditional g t e -> join $ mkIte <$> g <*> t <*> e
+  Cond g t e -> join $ mkIte <$> g <*> t <*> e
+  RepBy v i e -> join $ mkStore <$> v <*> i <*> e
 
 checkValid :: Map Id Type -> Pred -> IO (Maybe String)
 checkValid v p =
