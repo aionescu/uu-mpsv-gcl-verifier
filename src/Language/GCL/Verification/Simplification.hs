@@ -6,6 +6,13 @@ import Data.Functor.Foldable(cata)
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers
 
+pruneOverwrite :: Pred -> Pred -> Pred
+pruneOverwrite i' = cata go
+  where
+    go = \case
+      RepBy a i _ | i' == i -> a
+      p -> Fix p
+
 simplify :: Pred -> Pred
 simplify = cata go
   where
@@ -96,5 +103,7 @@ simplify = cata go
         | Div <- o -> I 1
 
       Op Sub a b -> go $ Op Add a $ go $ Negate b
+
+      RepBy a i v -> RepBy' (pruneOverwrite i a) i v
 
       p -> Fix p
