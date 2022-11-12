@@ -73,7 +73,7 @@ checkMutations Opts{..} Program{..} = do
   let
     decls = programOutput : programInputs
     mutations = mutateStmt programBody
-    checkKilled = anyPathKilled noHeuristics <=< linearizeStmt noHeuristics depth decls
+    checkKilled = anyPathKilled noSimplify <=< linearizeStmt Heuristics{noPrune=noPrune, noSimplify=noSimplify} depth decls
 
   results <- traverse checkKilled mutations
   let

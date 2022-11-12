@@ -16,7 +16,7 @@ Project for the Program Semantics &amp; Verification course
 cabal build
 
 # Usage (The first -- is necessary to disambiguate cabal's arguments from the program's arguments)
-cabal run . -- [--unroll-depth K] [--no-heuristics] [--show-stats] [--show-paths] [--show-preds] PATH
+cabal run . -- [--unroll-depth K] [--no-simplify] [--no-prune] [--show-stats] [--show-paths] [--show-preds] PATH
 cabal run . -- --help
 
 # Examples

@@ -38,21 +38,21 @@ substMapStmt m = para \case
   Let ds (e, _) -> Let' ds $ substMapStmt (foldr M.delete m $ declName <$> ds) e
 
 
-linearizeStmt :: Bool -> Int -> [Decl] -> Stmt -> IO [(Map Id Type, LPath)]
-linearizeStmt noHeuristics maxDepth decls s =
+linearizeStmt :: Heuristics -> Int -> [Decl] -> Stmt -> IO [(Map Id Type, LPath)]
+linearizeStmt Heuristics{..} maxDepth decls s =
   ((\(_, _, _, tys, p) -> (tys, p)) <$>) <$> go maxDepth 0 M.empty initialTys [] s
   where
     initialTys = M.fromList $ (\Decl{..} -> (declName, declType)) <$> decls
 
     prune :: Int -> Int -> Map Id Int -> Map Id Type -> LPath -> Stmt -> IO [(Int, Int, Map Id Int, Map Id Type, LPath)]
     prune
-      | noHeuristics = go
+      | noPrune = go
       | otherwise = prune'
 
     prune' :: Int -> Int -> Map Id Int -> Map Id Type -> LPath -> Stmt -> IO [(Int, Int, Map Id Int, Map Id Type, LPath)]
     prune' d _ _ _ _ _ | d < 0 = pure []
     prune' d h ids tys p s =
-      checkSAT tys (conjunctiveWLP noHeuristics p) >>= \case
+      checkSAT tys (conjunctiveWLP noSimplify p) >>= \case
         True -> go d h ids tys p s
         False -> pure [] -- [] <$ (print (reverse p) *> print (conjunctiveWLP True p) *> putStrLn "")
 
@@ -84,4 +84,4 @@ linearizeStmt noHeuristics maxDepth decls s =
 
 linearize :: Opts -> Program -> IO [(Map Id Type, LPath)]
 linearize Opts{..} Program{..} =
-  linearizeStmt noHeuristics depth (programOutput : programInputs) programBody
+  linearizeStmt Heuristics{noPrune=noPrune, noSimplify=noSimplify} depth (programOutput : programInputs) programBody

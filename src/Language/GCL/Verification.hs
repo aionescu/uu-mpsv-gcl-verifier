@@ -14,12 +14,12 @@ import Language.GCL.Verification.WLP(wlp)
 import Language.GCL.Verification.Z3
 import Language.GCL.Utils(ratio)
 
+
 verify :: Opts -> Program -> IO Bool
 verify opts@Opts{..} program = do
   tStart <- getCPUTime
-
   paths <- linearize opts program
-  let preds = (\(vars, p) -> (vars, p, wlp noHeuristics p)) <$> paths
+  let preds = (\(vars, p) -> (vars, p, wlp noSimplify p)) <$> paths
 
   results <- traverse (\(vars, _, pred) -> checkValid vars pred) preds
 
