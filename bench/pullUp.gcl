@@ -1,0 +1,21 @@
+pullUp(N: Int, step: Int, a: [Int]) -> b: [Int] {
+  assume #a >= 2 && #a == N && step > 0;
+
+  if a[0] >= a[1] {
+    a[1] = a[0] + step;
+  }
+
+  let k: Int {
+    k = 1 ;
+    while k < # a - 1 {
+      if a[k] >= a[k + 1] {
+        a[k + 1] = a[k] + step;
+      }
+
+      k = k + 1;
+    }
+  }
+
+  b = a;
+  assert b[N - 1] >= b[0] + #b - 1;
+}

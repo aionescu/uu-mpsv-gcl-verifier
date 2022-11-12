@@ -1,0 +1,17 @@
+memberOf(N: Int, x: Int, a: [Int]) -> found: Bool {
+  assume #a >= N && #a >= 0 && exists k. 0 <= k && k < #a && a[k] == x;
+
+  let k: Int {
+    k = 0;
+    found = False;
+
+    while k < #a {
+      if a[k] == x {
+        found = True;
+      }
+
+      k = k + 1;
+    }
+  }
+  assert found;
+}
