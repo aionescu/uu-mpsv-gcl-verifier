@@ -38,6 +38,8 @@ verify opts@Opts{heuristics = H{..}, ..} program = do
     mapM_ showResult $ zip preds results
 
   when showStats do
+    putStrLn ""
+    putStrLn $ "Inputs: " <> path <> ", depth = " <> show depth <> ", N = " <> show _N
     putStrLn $ "Invalid paths: " <> ratio invalid total
 
     let

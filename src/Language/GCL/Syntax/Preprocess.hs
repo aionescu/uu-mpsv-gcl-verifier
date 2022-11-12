@@ -29,7 +29,7 @@ addDistinctPre p@Program{..} =
     refs = filter ((== Ref) . declType) $ programOutput : programInputs
     refCount = length refs
 
-    addPre (Decl n _) = Seq' $ Assume' $ (I 0 :<= Var' n) :&& (Var' n :< I (length refs))
+    addPre (Decl n _) = Seq' $ Assume' $ (nullVal :<= Var' n) :&& (Var' n :< I (length refs))
 
 preprocess :: Maybe Int -> Program -> Program
 preprocess n = addDistinctPre . rewritePtrs . removeN n

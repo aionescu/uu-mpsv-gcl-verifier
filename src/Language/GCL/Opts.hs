@@ -21,7 +21,7 @@ optsParser :: Parser Opts
 optsParser =
   Opts
   <$> option auto (long "depth" <> value 50 <> metavar "K" <> help "Maximum depth of program paths (default 50)")
-  <*> optional (option auto $ long "N" <> metavar "N" <> help "")
+  <*> optional (option auto $ long "N" <> metavar "N" <> help "Experiment parameter (optional)")
   <*>
     ( H
       <$> switch (long "no-prune" <> help "Disable pruining unfeasible paths")

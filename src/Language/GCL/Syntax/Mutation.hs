@@ -3,6 +3,8 @@ module Language.GCL.Syntax.Mutation where
 import Control.Monad((<=<))
 import Data.Functor.Foldable(para)
 import Data.Map.Strict(Map)
+import System.CPUTime(getCPUTime)
+import Text.Printf(printf)
 
 import Language.GCL.Opts
 import Language.GCL.Syntax
@@ -31,7 +33,7 @@ mutateOp o a b =
 
 mutateExpr :: Expr -> [Expr]
 mutateExpr = para \case
-  IntLit{} -> []
+  IntLit i -> [I $ i - 1, I $ i + 1]
   BoolLit b -> [B $ not b]
   Null -> []
   Var{} -> []
@@ -77,10 +79,19 @@ checkMutations Opts{heuristics = H{..}, ..} Program{..} = do
       anyPathKilled noSimplify
       <=< linearizeStmt noPrune noSimplify depth programFirstPtr decls
 
+  tStart <- getCPUTime
   results <- traverse checkKilled mutations
+  tEnd <- getCPUTime
+
   let
     total = length results
     killed = length $ filter id results
 
+  putStrLn ""
+  putStrLn $ "Inputs: " <> path <> ", depth = " <> show depth <> ", N = " <> show _N
   putStrLn $ "Mutants killed: " <> ratio killed total
-  pure $ not $ or results
+
+  let time :: Double = fromIntegral (tEnd - tStart) / 1e12
+  printf "Time elapsed: %.3fs\n" time
+
+  pure $ killed > 0
