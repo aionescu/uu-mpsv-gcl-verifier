@@ -1,6 +1,7 @@
 module Language.GCL.Verification(verify) where
 
 import Control.Monad(when, unless)
+import Data.Bool(bool)
 import Data.List(sort)
 import Data.Maybe(isJust)
 import Text.Printf(printf)
@@ -39,7 +40,7 @@ verify opts@Opts{heuristics = H{..}, ..} program = do
 
   when showStats do
     putStrLn ""
-    putStrLn $ "Inputs: " <> path <> ", depth = " <> show depth <> ", N = " <> show _N
+    putStrLn $ "Inputs: " <> path <> ", depth = " <> show depth <> ", N = " <> show _N <> bool "" ", noPrune" noPrune <> bool "" ", noSimplify" noSimplify
     putStrLn $ "Invalid paths: " <> ratio invalid total
 
     let

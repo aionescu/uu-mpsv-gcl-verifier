@@ -1,6 +1,7 @@
 module Language.GCL.Syntax.Mutation where
 
 import Control.Monad((<=<))
+import Data.Bool(bool)
 import Data.Functor.Foldable(para)
 import Data.Map.Strict(Map)
 import System.CPUTime(getCPUTime)
@@ -88,7 +89,7 @@ checkMutations Opts{heuristics = H{..}, ..} Program{..} = do
     killed = length $ filter id results
 
   putStrLn ""
-  putStrLn $ "Inputs: " <> path <> ", depth = " <> show depth <> ", N = " <> show _N
+  putStrLn $ "Inputs: " <> path <> ", depth = " <> show depth <> ", N = " <> show _N <> bool "" ", noPrune" noPrune <> bool "" ", noSimplify" noSimplify
   putStrLn $ "Mutants killed: " <> ratio killed total
 
   let time :: Double = fromIntegral (tEnd - tStart) / 1e12
