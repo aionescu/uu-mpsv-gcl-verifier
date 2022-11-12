@@ -32,6 +32,12 @@ pattern a :== b = Fix (Op Eq a b)
 pattern (:!=) :: Expr -> Expr -> Expr
 pattern a :!= b = Fix (Op Neq a b)
 
+pattern (:<) :: Expr -> Expr -> Expr
+pattern a :< b = Fix (Op Lt a b)
+
+pattern (:<=) :: Expr -> Expr -> Expr
+pattern a :<= b = Fix (Op Lte a b)
+
 pattern Null' :: Expr
 pattern Null' = Fix Null
 
@@ -40,6 +46,9 @@ pattern Not' a = Fix (Not a)
 
 pattern Var' :: Id -> Expr
 pattern Var' a = Fix (Var a)
+
+pattern Length' :: Id -> Expr
+pattern Length' a = Fix (Length a)
 
 pattern Cond' :: Expr -> Expr -> Expr -> Expr
 pattern Cond' g t e = Fix (Cond g t e)

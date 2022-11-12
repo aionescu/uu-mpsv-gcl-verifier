@@ -12,8 +12,8 @@ import Language.GCL.Verification.Simplification(simplify)
 subst :: Id -> Expr -> Pred -> Pred
 subst i e = para \case
   Var v | i == v -> e
-  Length v | i == v -> e
-  GetVal v | Fix (Var e') <- e, i == v -> Fix $ GetVal e'
+  Length v | i == v, Fix (Var e') <- e -> Fix $ Length e'
+  GetVal v | i == v, Fix (Var e') <- e -> Fix $ GetVal e'
   Forall v (p, _) | i == v -> Fix $ Forall v p
   Exists v (p, _) | i == v -> Fix $ Exists v p
   p -> Fix $ snd <$> p
@@ -29,13 +29,13 @@ substVal (Var' -> i) e = cata \case
   z -> Fix z
 
 repAddress :: Id -> Int -> Pred -> Pred
-repAddress v (I -> add) = subst v add
+repAddress v i = subst v $ I i
 
 wlp :: Bool -> LPath -> Pred
-wlp (bool simplify id -> simplify') path = simplify' . fst $ foldr go (T, 1) path
+wlp (bool simplify id -> simplify') path = simplify' . fst $ foldl' go (T, 1) path
   where
-    go :: LStmt -> (Pred, Int) -> (Pred, Int)
-    go p (q, idx) = case p of
+    go :: (Pred, Int) -> LStmt -> (Pred, Int)
+    go (q, idx) p = case p of
       LAssume e -> (e :=> q, idx)
       LAssert e -> (e :&& q, idx)
       LAssign v e -> (subst v e q, idx)

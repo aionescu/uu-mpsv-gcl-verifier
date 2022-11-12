@@ -18,9 +18,9 @@ ratio a b = printf "%d/%d (%.2f%%)" a b $ fromIntegral  a * (100 :: Double) / fr
 
 verify :: Opts -> Program -> IO Bool
 verify Opts{..} program = do
-
   tStart <- getCPUTime
-  let paths = linearize noHeuristics depth program
+
+  paths <- linearize noHeuristics depth program
   let preds = (\(vars, p) -> (vars, p, wlp noHeuristics p)) <$> paths
 
   results <- traverse (\(vars, _, pred) -> checkValid vars pred) preds
@@ -32,8 +32,8 @@ verify Opts{..} program = do
     invalid = length $ filter isJust results
 
     showResult ((_, p, pr), result) = do
-      when showPaths (print p) 
-      when showPreds (print pr)
+      when showPaths $ print $ reverse p
+      when showPreds $ print pr
       case result of
         Nothing -> putStrLn "✔️  "
         Just m -> putStrLn $ "❌ " <> "\n" <> m

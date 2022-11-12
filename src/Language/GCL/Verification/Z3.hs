@@ -8,7 +8,6 @@ import Data.Functor.Foldable(cata)
 import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
-import System.IO.Unsafe(unsafePerformIO)
 import Z3.Monad hiding(Opts, local, simplify)
 
 import Language.GCL.Syntax
@@ -32,7 +31,7 @@ z3Env m = mkArraySorts >>= \arr -> (<>) <$> vars arr m <*> lengthVars m
     lengthVars :: Map Id Type -> Z3 Env
     lengthVars =
       fmap M.fromList
-      . traverse (\i -> ("#" <> i,) <$> mkFreshIntVar ('#' : T.unpack i))
+      . traverse (\i -> ("#" <> i,) <$> mkFreshIntVar ("#" <> T.unpack i))
       . M.keys
       . M.filter (\case Array{} -> True; _ -> False)
 
@@ -97,11 +96,3 @@ checkSAT v p =
   *> check
   <&> (== Sat)
   & evalZ3
-
-unsafeCheckValid :: Map Id Type -> Pred -> Maybe String
-unsafeCheckValid v p = unsafePerformIO $ checkValid v p
-{-# NOINLINE unsafeCheckValid #-}
-
-unsafeCheckSAT :: Map Id Type -> Pred -> Bool
-unsafeCheckSAT v p = unsafePerformIO $ checkSAT v p
-{-# NOINLINE unsafeCheckSAT #-}
