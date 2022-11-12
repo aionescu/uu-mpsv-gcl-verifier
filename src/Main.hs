@@ -8,9 +8,9 @@ import System.Exit(ExitCode(..), exitWith)
 
 import Language.GCL.Opts
 import Language.GCL.Parser(parse)
+import Language.GCL.Syntax.Preprocess(preprocess)
 import Language.GCL.TypeChecking(typeCheck)
 import Language.GCL.Verification(verify)
-import Language.GCL.Verification.WLP(replaceN)
 
 main :: IO ()
 main = do
@@ -20,7 +20,7 @@ main = do
   code
     & parse opts
     >>= typeCheck
-    <&> replaceN _N
+    <&> preprocess _N
     <&> (if dumpAST then (True <$) . print else verify opts)
     & either ((False <$) . T.putStrLn) id
     >>= exitWith . bool (ExitFailure 1) ExitSuccess

@@ -1,9 +1,9 @@
-module Language.GCL.Verification.WLP(wlp, conjunctiveWLP, replaceN) where
+module Language.GCL.Verification.WLP(wlp, conjunctiveWLP) where
 
 import Data.Bool(bool)
 import Data.Fix(Fix(..))
 import Data.Foldable(foldl')
-import Data.Functor.Foldable(cata, para)
+import Data.Functor.Foldable(para)
 
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers
@@ -13,51 +13,26 @@ subst :: Id -> Expr -> Pred -> Pred
 subst i e = para \case
   Var v | i == v -> e
   Length v | i == v, Fix (Var e') <- e -> Fix $ Length e'
-  GetVal v | i == v, Fix (Var e') <- e -> Fix $ GetVal e'
   Forall v (p, _) | i == v -> Fix $ Forall v p
   Exists v (p, _) | i == v -> Fix $ Exists v p
   p -> Fix $ snd <$> p
 
-substNew :: Id -> Expr -> Pred -> Pred
-substNew i e = cata \case
-  GetVal i' | i == i' -> e
-  p -> Fix p
-
-substVal :: Id -> Expr -> Pred -> Pred
-substVal (Var' -> i) e = cata \case
-  z@(GetVal (Var' -> v)) -> Cond' ((i :!= Null') :&& (i :== v)) e $ Fix z
-  z -> Fix z
-
-repAddress :: Id -> Int -> Pred -> Pred
-repAddress v i = subst v $ I i
-
 wlp :: Bool -> LPath -> Pred
-wlp (bool simplify id -> simplify') path = simplify' . fst $ foldl' go (T, 1) path
+wlp (bool simplify id -> simplify') = simplify' . foldl' go T
   where
-    go :: (Pred, Int) -> LStmt -> (Pred, Int)
-    go (q, idx) p = case p of
-      LAssume e -> (e :=> q, idx)
-      LAssert e -> (e :&& q, idx)
-      LAssign v e -> (subst v e q, idx)
-      LAssignIndex v i e -> (subst v (RepBy' (Var' v) i e) q, idx)
-      LAssignNew v e ->  (Var' v :!= Null' :=> repAddress v idx (substNew v e q), idx + 1)
-      LAssignVal v e -> (substVal v e q, idx)
+    go :: Pred -> LStmt -> Pred
+    go q = \case
+      LAssume e -> e :=> q
+      LAssert e -> e :&& q
+      LAssign v e -> subst v e q
+      LAssignIndex v i e -> subst v (RepBy' (Var' v) i e) q
 
 conjunctiveWLP :: Bool -> LPath -> Pred
-conjunctiveWLP (bool simplify id -> simplify') path = simplify' . fst $ foldl' go (T, 1) path
+conjunctiveWLP (bool simplify id -> simplify') = simplify' . foldl' go T
   where
-    go :: (Pred, Int) -> LStmt -> (Pred, Int)
-    go (q, idx) = \case
-      LAssume e -> (e :&& q, idx)
-      LAssert{} -> (q, idx)
-      LAssign v e -> (subst v e q, idx)
-      LAssignIndex v i e -> (subst v (RepBy' (Var' v) i e) q, idx)
-      LAssignNew v e -> (Var' v :!= Null' :=> repAddress v idx (substNew v e q), idx + 1)
-      LAssignVal v e -> (substVal v e q, idx)
-
--- This function shouldn't be in this module, but it uses `subst`,
--- and this was the easiest way to avoid dependency cycles.
-replaceN :: Maybe Int -> Program -> Program
-replaceN (Just n) p@Program{..}
-  | Decl "N" Int `elem` programInputs = p { programBody = mapExprs (subst "N" $ I n) programBody }
-replaceN _ p = p
+    go :: Pred -> LStmt -> Pred
+    go q = \case
+      LAssume e -> e :&& q
+      LAssert{} -> q
+      LAssign v e -> subst v e q
+      LAssignIndex v i e -> subst v (RepBy' (Var' v) i e) q

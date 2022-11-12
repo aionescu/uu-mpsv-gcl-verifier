@@ -54,8 +54,7 @@ typeInferExpr = cata \case
   Subscript v e -> check Int e *> v >>= unArray
   Forall v e -> with [Decl v Int] $ check Bool e $> Bool
   Exists v e -> with [Decl v Int] $ check Bool e $> Bool
-  Cond g t e -> check Bool g *> t >>= (`check` e)
-  RepBy v i e -> check Int i *> v >>= \a -> (unArray a >>= (`check` e)) $> a
+  RepBy{} -> throwError "RepBy shouldn't appear in user's source code"
 
 typeCheckExpr :: Type -> Expr -> TC ()
 typeCheckExpr t e = void $ check t $ typeInferExpr e

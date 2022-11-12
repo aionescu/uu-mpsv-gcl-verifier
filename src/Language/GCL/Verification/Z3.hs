@@ -26,7 +26,7 @@ mkArraySorts = do
     ]
 
 z3Env :: Map Id Type -> Z3 Env
-z3Env m = mkArraySorts >>= \arr -> (<>) <$> vars arr m <*> lengthVars m
+z3Env m = mkArraySorts >>= \arr -> (<>) <$> vars arr (M.insert "H" (Array Int) m) <*> lengthVars m
   where
     lengthVars :: Map Id Type -> Z3 Env
     lengthVars =
@@ -64,9 +64,7 @@ z3Expr :: Expr -> Z AST
 z3Expr = cata \case
   IntLit i -> mkInteger $ toInteger i
   BoolLit b -> mkBool b
-  Null -> mkInteger 0
   Var v -> asks (M.! v)
-  GetVal v -> asks (M.! v)
   Length v -> asks (M.! ("#" <> v))
   Op o a b -> join $ z3Op o <$> a <*> b
   Negate a -> mkUnaryMinus =<< a
@@ -80,8 +78,9 @@ z3Expr = cata \case
     var <- mkFreshIntVar $ T.unpack i
     app <- toApp var
     mkExistsConst [] [app] =<< local (M.insert i var) e
-  Cond g t e -> join $ mkIte <$> g <*> t <*> e
   RepBy v i e -> join $ mkStore <$> v <*> i <*> e
+  Null -> error "Nulls should be removed by preprocessing"
+  GetVal{} -> error "GetVal's should be removed by preprocessing"
 
 checkValid :: Map Id Type -> Pred -> IO (Maybe String)
 checkValid v p =

@@ -79,7 +79,6 @@ data ExprF e
   | Subscript e e
   | Forall Id e
   | Exists Id e
-  | Cond e e e
   | RepBy e e e
   deriving (Functor, Foldable, Traversable, Eq)
 
@@ -118,8 +117,6 @@ data LStmt
   | LAssert Expr
   | LAssign Id Expr
   | LAssignIndex Id Expr Expr
-  | LAssignNew Id Expr
-  | LAssignVal Id Expr
   deriving Eq
 
 -- Linear path
@@ -181,7 +178,6 @@ instance Show1 ExprF where
     Subscript v e -> showE 0 v . showChar '[' . showE 0 e . showChar ']'
     Forall v e -> showParen (p > 1) $ showString "forall " . showText v . showString ". " . showE 0 e
     Exists v e -> showParen (p > 1) $ showString "exists " . showText v . showString ". " . showE 0 e
-    Cond c e1 e2 -> showString "(" . showE 0 c . showString " -> " . showE 0 e1 . showString "|" . showE 0 e2 . showString ")"
     RepBy v i e -> showE 0 v . showString "(" . showE 0 i . showString " repby " . showE 0 e . showString ")"
 
 instance {-# OVERLAPPING #-} Show Expr where
@@ -219,8 +215,6 @@ instance Show LStmt where
     LAssert e -> Assert e
     LAssign v e -> Assign v e
     LAssignIndex v i e -> AssignIndex v i e
-    LAssignNew v e -> AssignNew v e
-    LAssignVal v e -> AssignVal v e
 
   showList l s = unwords (show <$> l) <> s
 

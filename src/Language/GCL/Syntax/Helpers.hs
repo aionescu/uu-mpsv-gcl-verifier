@@ -38,9 +38,6 @@ pattern a :< b = Fix (Op Lt a b)
 pattern (:<=) :: Expr -> Expr -> Expr
 pattern a :<= b = Fix (Op Lte a b)
 
-pattern Null' :: Expr
-pattern Null' = Fix Null
-
 pattern Not' :: Expr -> Expr
 pattern Not' a = Fix (Not a)
 
@@ -52,9 +49,6 @@ pattern Var' a = Fix (Var a)
 
 pattern Length' :: Id -> Expr
 pattern Length' a = Fix (Length a)
-
-pattern Cond' :: Expr -> Expr -> Expr -> Expr
-pattern Cond' g t e = Fix (Cond g t e)
 
 pattern RepBy' :: Expr -> Expr -> Expr -> Expr
 pattern RepBy' v i e = Fix (RepBy v i e)
@@ -104,6 +98,9 @@ pattern AssignNew' i e = Fix (AssignNew i e)
 pattern AssignVal' :: Id -> Expr -> Stmt
 pattern AssignVal' i e = Fix (AssignVal i e)
 
+nullVal :: Expr
+nullVal = I -1
+
 atoms :: Pred -> Int
 atoms = cata \case
   Op o a b
@@ -111,7 +108,6 @@ atoms = cata \case
   Not b -> b
   Forall _ b -> b
   Exists _ b -> b
-  Cond g _ _ -> g
   _ -> 1
 
 mapExprs :: (Expr -> Expr) -> Stmt -> Stmt

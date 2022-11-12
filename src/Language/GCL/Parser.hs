@@ -46,7 +46,7 @@ reserved =
   , "skip", "assume", "assert"
   , "if", "else", "while", "let"
   , "forall", "exists"
-  , "null", "val", "new"
+  , "null", "val", "new", "H"
   ]
 
 ident :: Parser Text

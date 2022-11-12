@@ -34,9 +34,6 @@ simplify = cata go
       Forall _ b@B{} -> b
       Exists _ b@B{} -> b
 
-      Cond T a _ -> a
-      Cond F _ a -> a
-
       Subscript (RepBy' v i e) i'
         | I a <- i, I b <- i', a /= b -> go $ Subscript v i'
         | i == i' -> e
@@ -59,13 +56,11 @@ simplify = cata go
       Op Eq F a -> go $ Not a
       Op Eq a T -> a
       Op Eq a F -> go $ Not a
-      Op Eq Null' Null' -> T
 
       Op Neq T a -> go $ Not a
       Op Neq F a -> a
       Op Neq a T -> go $ Not a
       Op Neq a F -> a
-      Op Neq Null' Null' -> F
 
       Op o (I a) (I b)
         | Add <- o -> I $ a + b
@@ -80,13 +75,6 @@ simplify = cata go
         | Gt <- o -> B $ a > b
         | Gte <- o -> B $ a >= b
 
-      Op o (Var' a) (Var' a')
-        | a == a' && o `elem` [Eq, Lte, Gte] -> T
-        | a == a' && o `elem` [Neq, Lt, Gt] -> F
-        | a == a', Add <- o -> go $ Op Mul (Fix $ Var a) $ I 2
-        | a == a', Sub <- o -> I 0
-        | a == a', Div <- o -> I 1
-
       Op o (Op' o' a b) c
         | o == o' && o `elem` [Add, Mul, And, Or] -> go $ Op o a $ go $ Op o b c
         | Add <- o', o `elem` [Eq, Neq, Lt, Lte, Gt, Gte] -> go $ Op o a $ go $ Op Sub c b
@@ -98,8 +86,15 @@ simplify = cata go
         | Gt <- o -> go $ Op Lt b a
         | Gte <- o -> go $ Op Lte b a
 
-      Op Sub a b -> go $ Op Add a $ go $ Negate b
-
       Op Div (Op' Div a b) c -> go $ Op Div a $ go $ Op Mul b c
+
+      Op o a ((== a) -> True)
+        | o `elem` [Eq, Lte, Gte] -> T
+        | o `elem` [Neq, Lt, Gt] -> F
+        | Add <- o -> go $ Op Mul a $ I 2
+        | Sub <- o -> I 0
+        | Div <- o -> I 1
+
+      Op Sub a b -> go $ Op Add a $ go $ Negate b
 
       p -> Fix p
