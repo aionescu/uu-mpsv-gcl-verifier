@@ -14,18 +14,11 @@ import Language.GCL.Verification.WLP(wlp)
 import Language.GCL.Verification.Z3
 import Language.GCL.Utils(ratio)
 
-
-addDistinctPre :: Program -> (LPath, Int)
-addDistinctPre Program{..} = (map (\Decl{..} -> LAssume ((I 0 :>= Var' declName) :&& (Var' declName :< I (length refs)))) refs, length refs)
-  where refs = filter (\Decl{..} -> declType == Ref) (programOutput : programInputs)
-
 verify :: Opts -> Program -> IO Bool
-verify opts@Opts{..} program = do
+verify opts@Opts{heuristics = H{..}, ..} program = do
   tStart <- getCPUTime
-  let (precond, h) = addDistinctPre program
-  paths <- linearize opts program h
-  let paths' = map (\(m, p) -> (m, p <> precond)) paths
-  let preds = (\(vars, p) -> (vars, p, wlp noSimplify p)) <$> paths'
+  paths <- linearize opts program
+  let preds = (\(vars, p) -> (vars, p, wlp noSimplify p)) <$> paths
 
   results <- traverse (\(vars, _, pred) -> checkValid vars pred) preds
   tEnd <- getCPUTime

@@ -148,6 +148,7 @@ program =
   <*> btwn "(" ")" decls
   <*> (symbol "->" *> decl)
   <*> block
+  <*> pure 0
 
 parse :: Opts -> Text -> Either Text Program
 parse Opts{..} =

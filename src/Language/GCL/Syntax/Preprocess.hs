@@ -22,5 +22,14 @@ rewritePtrs p@Program{..} = p { programBody = mapExprs go programBody }
       Null -> nullVal
       e -> Fix e
 
+addDistinctPre :: Program -> Program
+addDistinctPre p@Program{..} =
+  p { programBody = foldr addPre programBody refs, programFirstPtr = refCount }
+  where
+    refs = filter ((== Ref) . declType) $ programOutput : programInputs
+    refCount = length refs
+
+    addPre (Decl n _) = Seq' $ Assume' $ (I 0 :<= Var' n) :&& (Var' n :< I (length refs))
+
 preprocess :: Maybe Int -> Program -> Program
-preprocess n = rewritePtrs . removeN n
+preprocess n = addDistinctPre . rewritePtrs . removeN n

@@ -68,12 +68,14 @@ anyPathKilled noHeuristics ((tys, p) : ps) =
     Just{} -> pure True
     Nothing -> anyPathKilled noHeuristics ps
 
-checkMutations :: Opts -> Program -> Int -> IO Bool
-checkMutations Opts{..} Program{..} h = do
+checkMutations :: Opts -> Program -> IO Bool
+checkMutations Opts{heuristics = H{..}, ..} Program{..} = do
   let
     decls = programOutput : programInputs
     mutations = mutateStmt programBody
-    checkKilled = anyPathKilled noSimplify <=< linearizeStmt Heuristics{noPrune=noPrune, noSimplify=noSimplify} depth decls h
+    checkKilled =
+      anyPathKilled noSimplify
+      <=< linearizeStmt noPrune noSimplify depth programFirstPtr decls
 
   results <- traverse checkKilled mutations
   let

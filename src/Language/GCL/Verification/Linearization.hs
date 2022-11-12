@@ -37,10 +37,9 @@ substMapStmt m = para \case
   Seq (_, a) (_, b) -> Seq' a b
   Let ds (e, _) -> Let' ds $ substMapStmt (foldr M.delete m $ declName <$> ds) e
 
-
-linearizeStmt :: Heuristics -> Int -> [Decl] -> Int -> Stmt  -> IO [(Map Id Type, LPath)]
-linearizeStmt Heuristics{..} maxDepth decls h s =
-  ((\(_, _, _, tys, p) -> (tys, p)) <$>) <$> go maxDepth h M.empty initialTys [] s
+linearizeStmt :: Bool -> Bool -> Int -> Int -> [Decl] -> Stmt  -> IO [(Map Id Type, LPath)]
+linearizeStmt noPrune noSimplify maxDepth firstPtr decls s =
+  ((\(_, _, _, tys, p) -> (tys, p)) <$>) <$> go maxDepth firstPtr M.empty initialTys [] s
   where
     initialTys = M.fromList $ (\Decl{..} -> (declName, declType)) <$> decls
 
@@ -54,7 +53,7 @@ linearizeStmt Heuristics{..} maxDepth decls h s =
     prune' d h ids tys p s =
       checkSAT tys (conjunctiveWLP noSimplify p) >>= \case
         True -> go d h ids tys p s
-        False -> pure [] -- [] <$ (print (reverse p) *> print (conjunctiveWLP True p) *> putStrLn "")
+        False -> pure []
 
     go :: Int -> Int -> Map Id Int -> Map Id Type -> LPath -> Stmt -> IO [(Int, Int, Map Id Int, Map Id Type, LPath)]
     go d _ _ _ _ _ | d < 0 = pure []
@@ -82,5 +81,6 @@ linearizeStmt Heuristics{..} maxDepth decls h s =
               let ix = M.findWithDefault 0 declName ids
               in (declName, declType, ix, "$" <> declName <> showT ix)
 
-linearize :: Opts -> Program -> Int -> IO [(Map Id Type, LPath)]
-linearize Opts{..} Program{..} h = linearizeStmt Heuristics{noPrune=noPrune, noSimplify=noSimplify} depth (programOutput : programInputs) h programBody
+linearize :: Opts -> Program -> IO [(Map Id Type, LPath)]
+linearize Opts{heuristics = H{..}, ..} Program{..} =
+  linearizeStmt noPrune noSimplify depth programFirstPtr (programOutput : programInputs) programBody

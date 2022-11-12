@@ -2,12 +2,13 @@ module Language.GCL.Opts where
 
 import Options.Applicative
 
+data Heuristics = H { noPrune:: Bool , noSimplify:: Bool }
+
 data Opts =
   Opts
   { depth :: Int
   , _N :: Maybe Int
-  , noPrune :: Bool
-  , noSimplify :: Bool
+  , heuristics :: Heuristics
   , dumpAST :: Bool
   , showStats :: Bool
   , showPaths :: Bool
@@ -16,15 +17,16 @@ data Opts =
   , path :: FilePath
   }
 
-data Heuristics = Heuristics { noPrune:: Bool , noSimplify:: Bool }
-
 optsParser :: Parser Opts
 optsParser =
   Opts
   <$> option auto (long "depth" <> value 50 <> metavar "K" <> help "Maximum depth of program paths (default 50)")
   <*> optional (option auto $ long "N" <> metavar "N" <> help "")
-  <*> switch (long "no-prune" <> help "Disable pruining unfeasible paths")
-  <*> switch (long "no-simplify" <> help "Disable front-end simplifier")
+  <*>
+    ( H
+      <$> switch (long "no-prune" <> help "Disable pruining unfeasible paths")
+      <*> switch (long "no-simplify" <> help "Disable front-end simplifier")
+    )
   <*> switch (long "dump-ast" <> help "Show AST after parsing")
   <*> switch (long "show-stats" <> help "Show verification statistics")
   <*> switch (long "show-paths" <> help "Show paths and results")

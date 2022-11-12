@@ -17,7 +17,7 @@ import Language.GCL.Verification(verify)
 run :: Opts -> Program -> IO Bool
 run opts@Opts{..}
   | dumpAST = (True <$) . print
-  | mutate = flip (checkMutations opts) 10
+  | mutate = checkMutations opts
   | otherwise = verify opts
 
 main :: IO ()

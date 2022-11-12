@@ -123,10 +123,11 @@ data LStmt
 type LPath = [LStmt]
 
 data Program = Program
-  { programName :: Id,
-    programInputs :: [Decl],
-    programOutput :: Decl,
-    programBody :: Stmt
+  { programName :: Id
+  , programInputs :: [Decl]
+  , programOutput :: Decl
+  , programBody :: Stmt
+  , programFirstPtr :: Int
   }
 
 -- Show instances
@@ -219,4 +220,4 @@ instance Show LStmt where
   showList l s = unwords (show <$> l) <> s
 
 instance Show Program where
-  show (Program n i o b) = unpack n <> "(" <> decls i <> ") -> " <> show o <> block b
+  show (Program n i o b _) = unpack n <> "(" <> decls i <> ") -> " <> show o <> block b

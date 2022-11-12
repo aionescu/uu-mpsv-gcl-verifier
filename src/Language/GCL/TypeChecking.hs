@@ -81,6 +81,6 @@ typeCheckStmt = cata \case
   Let ds s -> with ds s
 
 typeCheck :: Program -> Either Text Program
-typeCheck p@(Program _ i o b) =
+typeCheck p@(Program _ i o b _) =
   first ("Type error: " <>)
   $ runReaderT (typeCheckStmt (Fix $ Let (o : i) b) $> p) M.empty
