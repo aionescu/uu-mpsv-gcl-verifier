@@ -44,6 +44,9 @@ pattern Null' = Fix Null
 pattern Not' :: Expr -> Expr
 pattern Not' a = Fix (Not a)
 
+pattern Negate' :: Expr -> Expr
+pattern Negate' a = Fix (Negate a)
+
 pattern Var' :: Id -> Expr
 pattern Var' a = Fix (Var a)
 
@@ -55,6 +58,18 @@ pattern Cond' g t e = Fix (Cond g t e)
 
 pattern RepBy' :: Expr -> Expr -> Expr -> Expr
 pattern RepBy' v i e = Fix (RepBy v i e)
+
+pattern Subscript' :: Expr -> Expr -> Expr
+pattern Subscript' v i = Fix (Subscript v i)
+
+pattern Op' :: Op -> Expr -> Expr -> Expr
+pattern Op' o a b = Fix (Op o a b)
+
+pattern Forall' :: Id -> Expr -> Expr
+pattern Forall' v a = Fix (Forall v a)
+
+pattern Exists' :: Id -> Expr -> Expr
+pattern Exists' v a = Fix (Exists v a)
 
 pattern Assert' :: Expr -> Stmt
 pattern Assert' a = Fix (Assert a)

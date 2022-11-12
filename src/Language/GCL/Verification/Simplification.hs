@@ -11,11 +11,11 @@ simplify = cata go
   where
     go = \case
       Not (B b) -> B $ not b
-      Not (Fix (Not a)) -> a
-      Not (Fix (Forall v e)) -> go $ Exists v $ go $ Not e
-      Not (Fix (Exists v e)) -> go $ Forall v $ go $ Not e
+      Not (Not' a) -> a
+      Not (Forall' v e) -> go $ Exists v $ go $ Not e
+      Not (Exists' v e) -> go $ Forall v $ go $ Not e
 
-      Not (Fix (Op o a b))
+      Not (Op' o a b)
         | And <- o -> go $ Op Or (go $ Not a) $ go $ Not b
         | Or <- o -> go $ Op And (go $ Not a) $ go $ Not b
         | Eq <- o -> go $ Op Neq a b
@@ -26,13 +26,22 @@ simplify = cata go
         | Gte <- o -> go $ Op Lt a b
 
       Negate (I i) -> I -i
-      Negate (Fix (Negate a)) -> a
+      Negate (Negate' a) -> a
 
-      Negate (Fix (Op Add a b)) -> go $ Op Add (go $ Negate a) $ go $ Negate b
-      Negate (Fix (Op Mul a b)) -> go $ Op Mul a $ go $ Negate b
+      Negate (Op' Add a b) -> go $ Op Add (go $ Negate a) $ go $ Negate b
+      Negate (Op' Mul a b) -> go $ Op Mul a $ go $ Negate b
 
       Forall _ b@B{} -> b
       Exists _ b@B{} -> b
+
+      Cond T a _ -> a
+      Cond F _ a -> a
+
+      Subscript (RepBy' v i e) i'
+        | I a <- i, I b <- i', a /= b -> go $ Subscript v i'
+        | i == i' -> e
+
+      RepBy (RepBy' v i _) i' e | i == i' -> go $ RepBy v i e
 
       Op Implies a b -> go $ Op Or (go $ Not a) b
 
@@ -50,11 +59,13 @@ simplify = cata go
       Op Eq F a -> go $ Not a
       Op Eq a T -> a
       Op Eq a F -> go $ Not a
+      Op Eq Null' Null' -> T
 
       Op Neq T a -> go $ Not a
       Op Neq F a -> a
       Op Neq a T -> go $ Not a
       Op Neq a F -> a
+      Op Neq Null' Null' -> F
 
       Op o (I a) (I b)
         | Add <- o -> I $ a + b
@@ -76,7 +87,7 @@ simplify = cata go
         | a == a', Sub <- o -> I 0
         | a == a', Div <- o -> I 1
 
-      Op o (Fix (Op o' a b)) c
+      Op o (Op' o' a b) c
         | o == o' && o `elem` [Add, Mul, And, Or] -> go $ Op o a $ go $ Op o b c
         | Add <- o', o `elem` [Eq, Neq, Lt, Lte, Gt, Gte] -> go $ Op o a $ go $ Op Sub c b
 
@@ -89,6 +100,6 @@ simplify = cata go
 
       Op Sub a b -> go $ Op Add a $ go $ Negate b
 
-      Op Div (Fix (Op Div a b)) c -> go $ Op Div a $ go $ Op Mul b c
+      Op Div (Op' Div a b) c -> go $ Op Div a $ go $ Op Mul b c
 
       p -> Fix p
