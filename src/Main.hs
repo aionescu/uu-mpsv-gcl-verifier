@@ -8,9 +8,17 @@ import System.Exit(ExitCode(..), exitWith)
 
 import Language.GCL.Opts
 import Language.GCL.Parser(parse)
+import Language.GCL.Syntax(Program)
+import Language.GCL.Syntax.Mutation(checkMutations)
 import Language.GCL.Syntax.Preprocess(preprocess)
 import Language.GCL.TypeChecking(typeCheck)
 import Language.GCL.Verification(verify)
+
+run :: Opts -> Program -> IO Bool
+run opts@Opts{..}
+  | dumpAST = (True <$) . print
+  | mutate = checkMutations opts
+  | otherwise = verify opts
 
 main :: IO ()
 main = do
@@ -21,6 +29,6 @@ main = do
     & parse opts
     >>= typeCheck
     <&> preprocess _N
-    <&> (if dumpAST then (True <$) . print else verify opts)
+    <&> run opts
     & either ((False <$) . T.putStrLn) id
     >>= exitWith . bool (ExitFailure 1) ExitSuccess

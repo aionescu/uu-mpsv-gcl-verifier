@@ -20,6 +20,7 @@ executable gcl-verifier
     Language.GCL.Parser
     Language.GCL.Syntax
     Language.GCL.Syntax.Helpers
+    Language.GCL.Syntax.Mutation
     Language.GCL.Syntax.Preprocess
     Language.GCL.TypeChecking
     Language.GCL.Utils

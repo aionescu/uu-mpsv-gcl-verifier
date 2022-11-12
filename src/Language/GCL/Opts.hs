@@ -11,6 +11,7 @@ data Opts =
   , showStats :: Bool
   , showPaths :: Bool
   , showPreds :: Bool
+  , mutate :: Bool
   , path :: FilePath
   }
 
@@ -24,6 +25,7 @@ optsParser =
   <*> switch (long "show-stats" <> help "Show verification statistics")
   <*> switch (long "show-paths" <> help "Show paths and results")
   <*> switch (long "show-preds" <> help "Show preds and results")
+  <*> switch (long "mutate" <> help "Run with mutations")
   <*> strArgument (metavar "PATH" <> help "The source file to verify")
 
 fullParser :: ParserInfo Opts

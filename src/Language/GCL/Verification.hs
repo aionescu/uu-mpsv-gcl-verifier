@@ -12,15 +12,13 @@ import Language.GCL.Syntax.Helpers(atoms)
 import Language.GCL.Verification.Linearization(linearize)
 import Language.GCL.Verification.WLP(wlp)
 import Language.GCL.Verification.Z3
-
-ratio :: Int -> Int -> String
-ratio a b = printf "%d/%d (%.2f%%)" a b $ fromIntegral  a * (100 :: Double) / fromIntegral b
+import Language.GCL.Utils(ratio)
 
 verify :: Opts -> Program -> IO Bool
-verify Opts{..} program = do
+verify opts@Opts{..} program = do
   tStart <- getCPUTime
 
-  paths <- linearize noHeuristics depth program
+  paths <- linearize opts program
   let preds = (\(vars, p) -> (vars, p, wlp noHeuristics p)) <$> paths
 
   results <- traverse (\(vars, _, pred) -> checkValid vars pred) preds
@@ -54,6 +52,5 @@ verify Opts{..} program = do
 
     let time :: Double = fromIntegral (tEnd - tStart) / 1e12
     printf "Time elapsed: %.3fs\n" time
-    printf ""
 
   pure $ invalid == 0

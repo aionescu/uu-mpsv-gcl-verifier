@@ -38,6 +38,24 @@ pattern a :< b = Fix (Op Lt a b)
 pattern (:<=) :: Expr -> Expr -> Expr
 pattern a :<= b = Fix (Op Lte a b)
 
+pattern (:>) :: Expr -> Expr -> Expr
+pattern a :> b = Fix (Op Gt a b)
+
+pattern (:>=) :: Expr -> Expr -> Expr
+pattern a :>= b = Fix (Op Gte a b)
+
+pattern (:+) :: Expr -> Expr -> Expr
+pattern a :+ b = Fix (Op Add a b)
+
+pattern (:*) :: Expr -> Expr -> Expr
+pattern a :* b = Fix (Op Mul a b)
+
+pattern (:-) :: Expr -> Expr -> Expr
+pattern a :- b = Fix (Op Sub a b)
+
+pattern (:/) :: Expr -> Expr -> Expr
+pattern a :/ b = Fix (Op Div a b)
+
 pattern Not' :: Expr -> Expr
 pattern Not' a = Fix (Not a)
 

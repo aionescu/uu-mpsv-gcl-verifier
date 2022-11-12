@@ -1,18 +1,19 @@
 module Language.GCL.Verification.Linearization where
 
+import Control.Monad(join)
 import Data.Fix(Fix(..))
+import Data.Functor((<&>))
 import Data.Functor.Foldable(para)
+import Data.List(unzip4)
 import Data.Map.Strict(Map)
 import Data.Map.Strict qualified as M
 
+import Language.GCL.Opts
 import Language.GCL.Syntax
 import Language.GCL.Syntax.Helpers
 import Language.GCL.Utils
 import Language.GCL.Verification.WLP
 import Language.GCL.Verification.Z3
-import Data.Functor ((<&>))
-import Data.List (unzip4)
-import Control.Monad (join)
 
 substMap :: Map Id Id -> Pred -> Pred
 substMap m = para \case
@@ -36,11 +37,12 @@ substMapStmt m = para \case
   Seq (_, a) (_, b) -> Seq' a b
   Let ds (e, _) -> Let' ds $ substMapStmt (foldr M.delete m $ declName <$> ds) e
 
-linearize :: Bool -> Int -> Program -> IO [(Map Id Type, LPath)]
-linearize noHeuristics maxDepth Program{..} =
-  ((\(_, _, _, tys, p) -> (tys, p)) <$>) <$> go maxDepth 0 M.empty initialTys [] programBody
+
+linearizeStmt :: Bool -> Int -> [Decl] -> Stmt -> IO [(Map Id Type, LPath)]
+linearizeStmt noHeuristics maxDepth decls s =
+  ((\(_, _, _, tys, p) -> (tys, p)) <$>) <$> go maxDepth 0 M.empty initialTys [] s
   where
-    initialTys = M.fromList $ (\Decl{..} -> (declName, declType)) <$> programOutput : programInputs
+    initialTys = M.fromList $ (\Decl{..} -> (declName, declType)) <$> decls
 
     prune :: Int -> Int -> Map Id Int -> Map Id Type -> LPath -> Stmt -> IO [(Int, Int, Map Id Int, Map Id Type, LPath)]
     prune
@@ -79,3 +81,7 @@ linearize noHeuristics maxDepth Program{..} =
             (names, types, ixs, names') = unzip4 $ ds <&> \Decl{..} ->
               let ix = M.findWithDefault 0 declName ids
               in (declName, declType, ix, "$" <> declName <> showT ix)
+
+linearize :: Opts -> Program -> IO [(Map Id Type, LPath)]
+linearize Opts{..} Program{..} =
+  linearizeStmt noHeuristics depth (programOutput : programInputs) programBody
