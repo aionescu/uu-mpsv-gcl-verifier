@@ -1,5 +1,5 @@
 min(N: Int, a: [Int], x: Ref, u: Ref) -> m: Ref {
-  assume #a > 0 && #a == N && ~(x == null) && forall i. 0 <= i && i < #a => a[i] > 0;
+  assume #a > 0 && #a == N && !(x == null) && forall i. 0 <= i && i < #a => a[i] > 0;
 
   let k: Int {
     k = 0;
@@ -9,12 +9,12 @@ min(N: Int, a: [Int], x: Ref, u: Ref) -> m: Ref {
 
       if k == 0 {
         m = u;
-      }
-
-      if u.val < m.val {
-        m = u;
       } else {
-        u.val = u.val + 1;
+        if u.val < m.val {
+          m = u;
+        } else {
+          u.val = u.val + 1;
+        }
       }
 
       if !(m == null) {
