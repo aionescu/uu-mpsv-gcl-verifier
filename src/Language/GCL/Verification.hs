@@ -15,15 +15,15 @@ import Language.GCL.Verification.Z3
 import Language.GCL.Utils(ratio)
 
 
-addDistinctPre :: Program -> LPath
-addDistinctPre Program{..} = map (\Decl{..} -> LAssume ((I 0 :>= Var' declName) :&& (Var' declName :< I 10))) refs
+addDistinctPre :: Program -> (LPath, Int)
+addDistinctPre Program{..} = (map (\Decl{..} -> LAssume ((I 0 :>= Var' declName) :&& (Var' declName :< I (length refs)))) refs, length refs)
   where refs = filter (\Decl{..} -> declType == Ref) (programOutput : programInputs)
 
 verify :: Opts -> Program -> IO Bool
 verify opts@Opts{..} program = do
   tStart <- getCPUTime
-  paths <- linearize opts program
-  let precond = addDistinctPre program
+  let (precond, h) = addDistinctPre program
+  paths <- linearize opts program h
   let paths' = map (\(m, p) -> (m, p <> precond)) paths
   let preds = (\(vars, p) -> (vars, p, wlp noSimplify p)) <$> paths'
 
